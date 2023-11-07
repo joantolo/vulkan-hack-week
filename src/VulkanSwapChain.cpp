@@ -21,6 +21,7 @@ void VulkanSwapChain::init(VkInstance* instance, VulkanDevice* device, VulkanSur
     this->surface = surface;
     createSwapChain();
     createImageViews();
+    registerResizeCallback();
 }
 
 void VulkanSwapChain::clear()
@@ -35,6 +36,22 @@ void VulkanSwapChain::clear()
         vkDestroyFramebuffer(*this->device, framebuffer, nullptr);
     }
 }
+
+static void framebufferSizeCallback(GLFWwindow* window, int, int)
+{
+    VulkanSwapChain* self = reinterpret_cast<VulkanSwapChain*>(
+                              glfwGetWindowUserPointer(window));
+
+    self->clear();
+    self->createSwapChain();
+    self->createImageViews();
+    self->createFrameBuffers();
+}
+
+void VulkanSwapChain::registerResizeCallback()
+{
+    glfwSetWindowUserPointer(*this->window, this);
+    glfwSetFramebufferSizeCallback(*this->window, framebufferSizeCallback);
 }
 
 void VulkanSwapChain::createSwapChain()

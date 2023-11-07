@@ -20,15 +20,15 @@ public:
 
     void setRenderPass (VulkanRenderPass* renderPass) { this->renderPass = renderPass; }
 
+    void createSwapChain();
+    void createImageViews();
     void createFrameBuffers();
 
 private:
-    void createSwapChain();
+    void registerResizeCallback();
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
     VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
     VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
-    void createImageViews();
 
 private:
     VkSwapchainKHR swapChain;
