@@ -9,12 +9,15 @@ vulkan_dep = dependency('vulkan')
 glfw_dep = dependency('glfw3')
 glm_dep = dependency('glm')
 
-conf_data = configuration_data()
 shaders_dir = join_paths(meson.current_source_dir(), 'src/shaders')
+
+conf_data = configuration_data()
 conf_data.set_quoted('SHADERS_DIR', shaders_dir)
+
 configure_file(input: 'config.h.meson',
                output: 'config.h',
                configuration: conf_data)
+
 configinc = include_directories('.')
 
 subdir('src')
