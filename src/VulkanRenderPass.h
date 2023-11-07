@@ -27,7 +27,6 @@ private:
 
     VkCommandPool commandPool;
     VkCommandBuffer commandBuffer;
-    std::vector<VkFramebuffer> swapChainFramebuffers;
 
     VulkanDevice* device;
     VulkanSwapChain* swapChain;

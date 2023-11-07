@@ -9,6 +9,7 @@
 #include "GlfwWindow.h"
 #include "VulkanDevice.h"
 #include "VulkanSurface.h"
+#include "VulkanRenderPass.h"
 
 #include "VulkanSwapChain.h"
 
@@ -27,8 +28,13 @@ void VulkanSwapChain::clear()
     vkDestroySwapchainKHR(*this->device, this->swapChain, nullptr);
 
     for (auto imageView : this->swapChainImageViews) {
-            vkDestroyImageView(*this->device, imageView, nullptr);
-        }
+        vkDestroyImageView(*this->device, imageView, nullptr);
+    }
+
+    for (auto framebuffer : this->swapChainFramebuffers) {
+        vkDestroyFramebuffer(*this->device, framebuffer, nullptr);
+    }
+}
 }
 
 void VulkanSwapChain::createSwapChain()
@@ -150,6 +156,34 @@ void VulkanSwapChain::createImageViews()
         VkResult result = vkCreateImageView(*this->device, &createInfo, nullptr, &this->swapChainImageViews[i]);
         if (result != VK_SUCCESS) {
             std::string errorMsg("Failed to create Image View: ");
+            errorMsg.append(string_VkResult(result));
+            throw std::runtime_error(errorMsg);
+        }
+    }
+}
+
+void VulkanSwapChain::createFrameBuffers()
+{
+    this->swapChainFramebuffers.resize(this->swapChainImageViews.size());
+
+    for (size_t i = 0; i < this->swapChainImageViews.size(); i++) {
+        VkImageView attachments[] = {
+            this->swapChainImageViews[i],
+        };
+
+        VkFramebufferCreateInfo frameBufferInfo{};
+        frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        frameBufferInfo.renderPass = *this->renderPass;
+        frameBufferInfo.attachmentCount = 1;
+        frameBufferInfo.pAttachments = attachments;
+        frameBufferInfo.width = this->swapChainExtent.width;
+        frameBufferInfo.height = this->swapChainExtent.height;
+        frameBufferInfo.layers = 1;
+
+        VkResult result = vkCreateFramebuffer(*this->device, &frameBufferInfo,
+                                              nullptr, &this->swapChainFramebuffers[i]);
+        if (result != VK_SUCCESS) {
+            std::string errorMsg("Failed to create FrameBuffer: ");
             errorMsg.append(string_VkResult(result));
             throw std::runtime_error(errorMsg);
         }

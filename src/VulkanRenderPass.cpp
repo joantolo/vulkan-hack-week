@@ -19,17 +19,13 @@ void VulkanRenderPass::init(VulkanDevice* device, VulkanSwapChain* swapChain, Vu
     createRenderPass();
     createCommandPool();
     createCommandBuffer();
-    createFrameBuffers();
+    this->swapChain->setRenderPass(this);
+    this->swapChain->createFrameBuffers();
 }
 
 void VulkanRenderPass::clear()
 {
     vkDestroyCommandPool(*this->device, this->commandPool, nullptr);
-
-    for (auto framebuffer : this->swapChainFramebuffers) {
-        vkDestroyFramebuffer(*this->device, framebuffer, nullptr);
-    }
-
     vkDestroyRenderPass(*this->device, this->renderPass, nullptr);
 }
 
@@ -76,34 +72,6 @@ void VulkanRenderPass::createRenderPass()
         std::string errorMsg("Failed to create render pass: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);
-    }
-}
-
-void VulkanRenderPass::createFrameBuffers()
-{
-    std::vector<VkImageView> swapChainImageViews = this->swapChain->getImageViews();
-    swapChainFramebuffers.resize(swapChainImageViews.size());
-
-    for (size_t i = 0; i < swapChainImageViews.size(); i++) {
-        VkImageView attachments[] = {
-            swapChainImageViews[i],
-        };
-
-        VkFramebufferCreateInfo frameBufferInfo{};
-        frameBufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        frameBufferInfo.renderPass = *this;
-        frameBufferInfo.attachmentCount = 1;
-        frameBufferInfo.pAttachments = attachments;
-        frameBufferInfo.width = this->swapChain->getExtent().width;
-        frameBufferInfo.height = this->swapChain->getExtent().height;
-        frameBufferInfo.layers = 1;
-
-        VkResult result = vkCreateFramebuffer(*this->device, &frameBufferInfo, nullptr, &this->swapChainFramebuffers[i]);
-        if (result != VK_SUCCESS) {
-            std::string errorMsg("Failed to create FrameBuffer: ");
-            errorMsg.append(string_VkResult(result));
-            throw std::runtime_error(errorMsg);
-        }
     }
 }
 
@@ -157,7 +125,7 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer, Triang
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassInfo.renderPass = this->renderPass;
-    renderPassInfo.framebuffer = this->swapChainFramebuffers[imageIndex];
+    renderPassInfo.framebuffer = this->swapChain->getFrameBuffers()[imageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = this->swapChain->getExtent();
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
