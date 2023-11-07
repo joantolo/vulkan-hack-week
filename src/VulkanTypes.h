@@ -7,7 +7,6 @@
 #include <optional>
 #include <vector>
 
-class GlfwWindow;
 class Triangle;
 class VulkanBuffer;
 class VulkanDebugger;
@@ -16,27 +15,33 @@ class VulkanPipeline;
 class VulkanRenderPass;
 class VulkanSurface;
 class VulkanSwapChain;
+class VulkanWindow;
 
-struct SwapChainSupportDetails {
+struct SwapChainSupportDetails
+{
     VkSurfaceCapabilitiesKHR capabilities;
     std::vector<VkSurfaceFormatKHR> formats;
     std::vector<VkPresentModeKHR> presentModes;
 };
 
-struct QueueFamilyIndices {
+struct QueueFamilyIndices
+{
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;
 
-    bool isComplete() {
+    bool isComplete()
+    {
         return graphicsFamily.has_value() && presentFamily.has_value();
     }
 };
 
-struct Vertex {
+struct Vertex
+{
     glm::vec2 pos;
     glm::vec3 color;
 
-    static VkVertexInputBindingDescription getBindingDescription() {
+    static VkVertexInputBindingDescription getBindingDescription()
+    {
         VkVertexInputBindingDescription bindingDescription{};
         bindingDescription.binding = 0;
         bindingDescription.stride = sizeof(Vertex);
@@ -44,7 +49,9 @@ struct Vertex {
         return bindingDescription;
     }
 
-    static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+    static std::vector<VkVertexInputAttributeDescription>
+    getAttributeDescriptions()
+    {
         std::vector<VkVertexInputAttributeDescription> attributeDescriptions(2);
         attributeDescriptions[0].binding = 0;
         attributeDescriptions[0].location = 0;

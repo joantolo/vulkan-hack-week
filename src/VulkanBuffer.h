@@ -7,17 +7,20 @@
 
 class VulkanBuffer
 {
-public:
-    void init(VulkanDevice* device, VulkanRenderPass* renderPass);
+  public:
+    void init(VulkanDevice *device, VulkanRenderPass *renderPass);
     void clear();
-    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage,
-                      VkMemoryPropertyFlags properties, VkBuffer& buffer,
-                      VkDeviceMemory& bufferMemory);
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+    void createBuffer(VkDeviceSize size,
+                      VkBufferUsageFlags usage,
+                      VkMemoryPropertyFlags properties,
+                      VkBuffer &buffer,
+                      VkDeviceMemory &bufferMemory);
+    uint32_t findMemoryType(uint32_t typeFilter,
+                            VkMemoryPropertyFlags properties);
     void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
 
-private:
-    VulkanDevice* device;
-    VulkanRenderPass* renderPass;
+  private:
+    VulkanDevice *device;
+    VulkanRenderPass *renderPass;
 };
 #endif // VULKAN_SURFACE_H

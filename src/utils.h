@@ -4,6 +4,6 @@
 #include <string>
 #include <vector>
 
-std::vector<char> readFile(const std::string& filename);
+std::vector<char> readFile(const std::string &filename);
 
 #endif // UTILS_H

@@ -7,18 +7,20 @@
 
 class VulkanSurface
 {
-public:
-    void init(VkInstance* instance, GlfwWindow* window);
+  public:
+    void init(VkInstance *instance, VulkanWindow *window);
     void clear();
-    operator VkSurfaceKHR() const { return surface; }
 
-private:
+  private:
     void createSurface();
 
-private:
+  public:
+    operator VkSurfaceKHR() const { return surface; }
+
+  private:
     VkSurfaceKHR surface;
 
-    VkInstance* instance;
-    GlfwWindow* window;
+    VkInstance *instance;
+    VulkanWindow *window;
 };
 #endif // VULKAN_SURFACE_H

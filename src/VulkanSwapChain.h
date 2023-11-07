@@ -9,35 +9,45 @@
 
 class VulkanSwapChain
 {
-public:
-    void init(VkInstance* instance, VulkanDevice* device, VulkanSurface* surface, GlfwWindow* window);
+  public:
+    void init(VkInstance *instance,
+              VulkanDevice *device,
+              VulkanSurface *surface,
+              VulkanWindow *window);
     void clear();
-
-    VkFormat getImageFormat() const { return swapChainImageFormat; }
-    VkExtent2D getExtent() const { return swapChainExtent; }
-    std::vector<VkFramebuffer> getFrameBuffers() const { return swapChainFramebuffers; }
-    operator VkSwapchainKHR() const { return swapChain; }
-
-    void setRenderPass (VulkanRenderPass* renderPass) { this->renderPass = renderPass; }
-
     void createSwapChain();
     void createImageViews();
     void createFrameBuffers();
 
-private:
+  private:
     void registerResizeCallback();
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
-    VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
-    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+    VkSurfaceFormatKHR chooseSwapSurfaceFormat(
+        const std::vector<VkSurfaceFormatKHR> &availableFormats);
+    VkPresentModeKHR chooseSwapPresentMode(
+        const std::vector<VkPresentModeKHR> &availablePresentModes);
+    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR &capabilities);
 
-private:
+  public:
+    VkFormat getImageFormat() const { return swapChainImageFormat; }
+    VkExtent2D getExtent() const { return swapChainExtent; }
+    std::vector<VkFramebuffer> getFrameBuffers() const
+    {
+        return swapChainFramebuffers;
+    }
+    void setRenderPass(VulkanRenderPass *renderPass)
+    {
+        this->renderPass = renderPass;
+    }
+    operator VkSwapchainKHR() const { return swapChain; }
+
+  private:
     VkSwapchainKHR swapChain;
 
-    VkInstance* instance;
-    VulkanDevice* device;
-    GlfwWindow* window;
-    VulkanSurface* surface;
-    VulkanRenderPass* renderPass;
+    VkInstance *instance;
+    VulkanDevice *device;
+    VulkanWindow *window;
+    VulkanSurface *surface;
+    VulkanRenderPass *renderPass;
 
     std::vector<VkImageView> swapChainImageViews;
     std::vector<VkImage> swapChainImages;

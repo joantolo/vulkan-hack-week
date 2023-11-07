@@ -11,27 +11,27 @@
 
 class Triangle
 {
-public:
-    void init(VulkanDevice* device, VulkanBuffer* bufferCreator);
+  public:
+    void init(VulkanDevice *device, VulkanBuffer *bufferCreator);
     void clear();
+
+  private:
+    void createVertexBuffer();
+
+  public:
     VkBuffer getVertexBuffer() const { return vertexBuffer; }
     std::vector<Vertex> getVertices() const { return vertices; }
 
-private:
-    void createVertexBuffer();
-
-private:
-    const std::vector<Vertex> vertices = {
-        {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-        {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-        {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-    };
+  private:
+    const std::vector<Vertex> vertices = {{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                                          {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
+                                          {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
 
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
 
-    VulkanDevice* device;
-    VulkanBuffer* bufferCreator;
+    VulkanDevice *device;
+    VulkanBuffer *bufferCreator;
 };
 
 #endif // TRIANGLE_H

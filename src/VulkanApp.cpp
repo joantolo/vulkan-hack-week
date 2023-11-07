@@ -1,6 +1,6 @@
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
 #include <GLFW/glfw3.h>
+#include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.h>
 
 #include <iostream>
 #include <vector>
@@ -12,12 +12,14 @@
 const uint32_t WIDTH = 800;
 const uint32_t HEIGHT = 600;
 
-static std::vector<const char*> getRequiredExtensions()
+static std::vector<const char *> getRequiredExtensions()
 {
     uint32_t glfwExtensionCount = 0;
-    const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+    const char **glfwExtensions =
+        glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
 
-    std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+    std::vector<const char *> extensions(glfwExtensions,
+                                         glfwExtensions + glfwExtensionCount);
 
     if (useDebugger)
         VulkanDebugger::addRequiredExtensions(extensions);
@@ -46,13 +48,15 @@ static VkInstance createInstance()
 
     VkInstance instance{};
     createInfo.enabledLayerCount = 0;
-    if (useDebugger) {
+    if (useDebugger)
+    {
         VulkanDebugger::init(&instance);
         VulkanDebugger::addValidationLayers(createInfo);
     }
 
     VkResult result = vkCreateInstance(&createInfo, nullptr, &instance);
-    if (result != VK_SUCCESS) {
+    if (result != VK_SUCCESS)
+    {
         std::string errorMsg("Failed to create instance: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);
@@ -79,7 +83,8 @@ void VulkanApp::init()
     this->window.init(WIDTH, HEIGHT, "Vulkan");
     this->surface.init(&this->instance, &this->window);
     this->device.init(&this->instance, &this->surface);
-    this->swapChain.init(&this->instance, &this->device, &this->surface, &this->window);
+    this->swapChain.init(
+        &this->instance, &this->device, &this->surface, &this->window);
 
     this->pipeline.init(&this->device, &this->swapChain, &this->triangle);
 
@@ -88,7 +93,8 @@ void VulkanApp::init()
 
 void VulkanApp::mainLoop()
 {
-    while (!glfwWindowShouldClose(this->window)) {
+    while (!glfwWindowShouldClose(this->window))
+    {
         glfwPollEvents();
         this->pipeline.drawFrame();
     }

@@ -12,30 +12,37 @@
 
 class VulkanPipeline
 {
-public:
-    void init(VulkanDevice* device, VulkanSwapChain* swapChain, Triangle* triangle);
+  public:
+    void init(VulkanDevice *device,
+              VulkanSwapChain *swapChain,
+              Triangle *triangle);
     void clear();
     void drawFrame();
-    VulkanBuffer& getBufferCreator() { return bufferCreator; }
-    operator VkPipeline() const { return graphicsPipeline; }
 
-private:
+  private:
     void createPipeline();
     void createSyncObjects();
     std::vector<VkPipelineShaderStageCreateInfo> createShaders();
-    VkShaderModule createShaderModule(const std::vector<char>& code);
-    VkPipelineVertexInputStateCreateInfo createVertexInputInfo(const VkVertexInputBindingDescription& bindingDescription,
-                                                               const std::vector<VkVertexInputAttributeDescription>& attributeDescriptions);
+    VkShaderModule createShaderModule(const std::vector<char> &code);
+    VkPipelineVertexInputStateCreateInfo createVertexInputInfo(
+        const VkVertexInputBindingDescription &bindingDescription,
+        const std::vector<VkVertexInputAttributeDescription>
+            &attributeDescriptions);
     VkPipelineInputAssemblyStateCreateInfo createInputAssembly();
     VkPipelineViewportStateCreateInfo createViewportState();
     VkPipelineRasterizationStateCreateInfo createRasterizer();
     VkPipelineMultisampleStateCreateInfo createMultisampling();
     VkPipelineColorBlendAttachmentState createColorBlendAttachment();
-    VkPipelineColorBlendStateCreateInfo createColorBlending(VkPipelineColorBlendAttachmentState* colorBlendAttachment);
+    VkPipelineColorBlendStateCreateInfo createColorBlending(
+        VkPipelineColorBlendAttachmentState *colorBlendAttachment);
     VkPipelineDynamicStateCreateInfo createDynamicState();
     VkPipelineLayout createPipelineLayout();
 
-private:
+  public:
+    VulkanBuffer &getBufferCreator() { return bufferCreator; }
+    operator VkPipeline() const { return graphicsPipeline; }
+
+  private:
     VkPipeline graphicsPipeline;
     VkPipelineLayout pipelineLayout;
 
@@ -49,9 +56,9 @@ private:
     VkSemaphore renderFinishedSemaphore;
     VkFence inFlightFence;
 
-    VulkanDevice* device;
-    VulkanSwapChain* swapChain;
+    VulkanDevice *device;
+    VulkanSwapChain *swapChain;
 
-    Triangle* triangle;
+    Triangle *triangle;
 };
 #endif // VULKAN_PIPELINE_H

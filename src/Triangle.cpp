@@ -1,6 +1,6 @@
 #include <glm/glm.hpp>
-#include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.h>
 
 #include <cstring>
 #include <iostream>
@@ -10,7 +10,7 @@
 
 #include "Triangle.h"
 
-void Triangle::init(VulkanDevice* device, VulkanBuffer* bufferCreator)
+void Triangle::init(VulkanDevice *device, VulkanBuffer *bufferCreator)
 {
     this->device = device;
     this->bufferCreator = bufferCreator;
@@ -33,19 +33,21 @@ void Triangle::createVertexBuffer()
     this->bufferCreator->createBuffer(bufferSize,
                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                      stagingBuffer, stagingBufferMemory);
+                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                      stagingBuffer,
+                                      stagingBufferMemory);
 
-    void* data;
+    void *data;
     vkMapMemory(*this->device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, this->vertices.data(), (size_t) bufferSize);
+    memcpy(data, this->vertices.data(), (size_t)bufferSize);
     vkUnmapMemory(*this->device, stagingBufferMemory);
 
     this->bufferCreator->createBuffer(bufferSize,
                                       VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                                      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                      this->vertexBuffer, this->vertexBufferMemory);
+                                      this->vertexBuffer,
+                                      this->vertexBufferMemory);
 
     this->bufferCreator->copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 

@@ -1,6 +1,6 @@
-#include <vulkan/vulkan.h>
-#include <vulkan/vk_enum_string_helper.h>
 #include <glm/gtx/string_cast.hpp>
+#include <vulkan/vk_enum_string_helper.h>
+#include <vulkan/vulkan.h>
 
 #include <iostream>
 
@@ -10,7 +10,9 @@
 
 #include "VulkanRenderPass.h"
 
-void VulkanRenderPass::init(VulkanDevice* device, VulkanSwapChain* swapChain, VulkanPipeline* pipeline)
+void VulkanRenderPass::init(VulkanDevice *device,
+                            VulkanSwapChain *swapChain,
+                            VulkanPipeline *pipeline)
 {
     this->device = device;
     this->swapChain = swapChain;
@@ -67,8 +69,10 @@ void VulkanRenderPass::createRenderPass()
     renderPassInfo.dependencyCount = 1;
     renderPassInfo.pDependencies = &dependency;
 
-    VkResult result = vkCreateRenderPass(*this->device, &renderPassInfo, nullptr, &this->renderPass);
-    if (result != VK_SUCCESS) {
+    VkResult result = vkCreateRenderPass(
+        *this->device, &renderPassInfo, nullptr, &this->renderPass);
+    if (result != VK_SUCCESS)
+    {
         std::string errorMsg("Failed to create render pass: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);
@@ -77,15 +81,18 @@ void VulkanRenderPass::createRenderPass()
 
 void VulkanRenderPass::createCommandPool()
 {
-    QueueFamilyIndices queueFamilyIndices = this->device->getQueueFamiyIndices();
+    QueueFamilyIndices queueFamilyIndices =
+        this->device->getQueueFamiyIndices();
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-    VkResult result = vkCreateCommandPool(*this->device, &poolInfo, nullptr, &this->commandPool);
-    if (result != VK_SUCCESS) {
+    VkResult result = vkCreateCommandPool(
+        *this->device, &poolInfo, nullptr, &this->commandPool);
+    if (result != VK_SUCCESS)
+    {
         std::string errorMsg("Failed to create command pool: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);
@@ -100,23 +107,28 @@ void VulkanRenderPass::createCommandBuffer()
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
 
-    VkResult result = vkAllocateCommandBuffers(*this->device, &allocInfo, &this->commandBuffer);
-    if (result != VK_SUCCESS) {
+    VkResult result = vkAllocateCommandBuffers(
+        *this->device, &allocInfo, &this->commandBuffer);
+    if (result != VK_SUCCESS)
+    {
         std::string errorMsg("Failed to allocate command buffer: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);
     }
 }
 
-void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer, Triangle triangle, uint32_t imageIndex)
+void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
+                                           Triangle triangle,
+                                           uint32_t imageIndex)
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0; // Optional
+    beginInfo.flags = 0;                  // Optional
     beginInfo.pInheritanceInfo = nullptr; // Optional
 
     VkResult result = vkBeginCommandBuffer(commandBuffer, &beginInfo);
-    if (result != VK_SUCCESS) {
+    if (result != VK_SUCCESS)
+    {
         std::string errorMsg("Failed to begin recording a command buffer: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);
@@ -132,9 +144,11 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer, Triang
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
 
-    vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+    vkCmdBeginRenderPass(
+        commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *this->pipeline);
+    vkCmdBindPipeline(
+        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *this->pipeline);
 
     VkExtent2D swapChainExtent = this->swapChain->getExtent();
     VkViewport viewport{};
@@ -154,12 +168,17 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer, Triang
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(commandBuffer, static_cast<uint32_t>(triangle.getVertices().size()), 1, 0, 0);
+    vkCmdDraw(commandBuffer,
+              static_cast<uint32_t>(triangle.getVertices().size()),
+              1,
+              0,
+              0);
 
     vkCmdEndRenderPass(commandBuffer);
 
     result = vkEndCommandBuffer(commandBuffer);
-    if (result != VK_SUCCESS) {
+    if (result != VK_SUCCESS)
+    {
         std::string errorMsg("Failed to record a command buffer: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);

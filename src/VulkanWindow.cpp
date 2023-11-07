@@ -1,8 +1,8 @@
 #include <GLFW/glfw3.h>
 
-#include "GlfwWindow.h"
+#include "VulkanWindow.h"
 
-void GlfwWindow::init(size_t width, size_t heigth, const char* name)
+void VulkanWindow::init(size_t width, size_t heigth, const char *name)
 {
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
@@ -10,7 +10,7 @@ void GlfwWindow::init(size_t width, size_t heigth, const char* name)
     this->window = glfwCreateWindow(width, heigth, name, nullptr, nullptr);
 }
 
-void GlfwWindow::clear()
+void VulkanWindow::clear()
 {
     glfwDestroyWindow(this->window);
 }

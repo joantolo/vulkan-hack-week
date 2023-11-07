@@ -5,27 +5,27 @@
 
 #include <vector>
 
-#include "GlfwWindow.h"
 #include "Triangle.h"
 #include "VulkanDevice.h"
 #include "VulkanPipeline.h"
 #include "VulkanSurface.h"
 #include "VulkanSwapChain.h"
+#include "VulkanWindow.h"
 
 class VulkanApp
 {
-public:
+  public:
     void run();
 
-private:
+  private:
     void init();
     void mainLoop();
     void clear();
 
-private:
+  private:
     VkInstance instance;
 
-    GlfwWindow window;
+    VulkanWindow window;
     VulkanSurface surface;
     VulkanDevice device;
     VulkanSwapChain swapChain;

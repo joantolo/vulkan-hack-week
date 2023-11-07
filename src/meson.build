@@ -7,7 +7,6 @@ deps = [
 
 sources = files([
   'main.cpp',
-  'GlfwWindow.cpp',
   'Triangle.cpp',
   'utils.cpp',
   'VulkanApp.cpp',
@@ -18,6 +17,7 @@ sources = files([
   'VulkanRenderPass.cpp',
   'VulkanSwapChain.cpp',
   'VulkanSurface.cpp',
+  'VulkanWindow.cpp',
 ])
 
 vulkan_hack_week = executable('vulkan-hack-week',

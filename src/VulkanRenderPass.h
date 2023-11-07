@@ -6,31 +6,35 @@
 
 class VulkanRenderPass
 {
-public:
-    void init(VulkanDevice* device, VulkanSwapChain* swapChain, VulkanPipeline* pipeline);
+  public:
+    void init(VulkanDevice *device,
+              VulkanSwapChain *swapChain,
+              VulkanPipeline *pipeline);
     void clear();
-    VkCommandPool getCommandPool() const { return commandPool; }
-    VkCommandBuffer getCommandBuffer() const { return commandBuffer; }
-    void recordCommandBuffer(VkCommandBuffer commandBuffer, Triangle triangle, uint32_t imageIndex);
-    operator VkRenderPass() const { return renderPass; }
+    void recordCommandBuffer(VkCommandBuffer commandBuffer,
+                             Triangle triangle,
+                             uint32_t imageIndex);
 
-private:
+  private:
     void createRenderPass();
-
     void createCommandPool();
     void createCommandBuffer();
-
     void createFrameBuffers();
 
-private:
+  public:
+    VkCommandPool getCommandPool() const { return commandPool; }
+    VkCommandBuffer getCommandBuffer() const { return commandBuffer; }
+    operator VkRenderPass() const { return renderPass; }
+
+  private:
     VkRenderPass renderPass;
 
     VkCommandPool commandPool;
     VkCommandBuffer commandBuffer;
 
-    VulkanDevice* device;
-    VulkanSwapChain* swapChain;
-    VulkanPipeline* pipeline;
+    VulkanDevice *device;
+    VulkanSwapChain *swapChain;
+    VulkanPipeline *pipeline;
 };
 
 #endif // VULKAN_RENDER_PASS_H

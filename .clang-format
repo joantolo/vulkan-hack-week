@@ -1,0 +1,9 @@
+---
+BasedOnStyle: Microsoft
+AllowShortFunctionsOnASingleLine: Inline
+AllowAllParametersOfDeclarationOnNextLine: false
+BinPackArguments: false
+BinPackParameters: false
+Language: Cpp
+ColumnLimit: 80
+---
