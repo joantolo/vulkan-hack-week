@@ -22,9 +22,6 @@ private:
     void mainLoop();
     void clear();
 
-    void createInstance();
-    std::vector<const char*> getRequiredExtensions();
-
 private:
     VkInstance instance;
 

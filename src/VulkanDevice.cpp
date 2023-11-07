@@ -137,7 +137,6 @@ bool VulkanDevice::checkDeviceExtensionSupport(VkPhysicalDevice device)
 SwapChainSupportDetails VulkanDevice::querySwapChainSupport(VkPhysicalDevice device)
 {
     SwapChainSupportDetails details;
-
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, *this->surface, &details.capabilities);
 
     uint32_t formatCount;
