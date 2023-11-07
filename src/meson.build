@@ -1,5 +1,6 @@
 deps = [
   vulkan_dep,
+  vk_validation_layers_dep,
   glfw_dep,
   glm_dep,
 ]
