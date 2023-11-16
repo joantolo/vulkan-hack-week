@@ -2,7 +2,6 @@
 #include <vector>
 #include <vulkan/vk_enum_string_helper.h>
 
-#include "VulkanBufferCreator.h"
 #include "VulkanDebugger.h"
 
 #include "VulkanContext.h"
@@ -71,10 +70,10 @@ VulkanContext::VulkanContext()
       surface(VulkanSurface(this)),
       device(VulkanDevice(this)),
       swapChain(VulkanSwapChain(this)),
+      bufferCreator(VulkanBufferCreator(this)),
       renderPass(VulkanRenderPass(this)),
       pipeline(VulkanPipeline(this))
 {
-    VulkanBufferCreator(this);
 }
 
 VulkanContext::~VulkanContext()
@@ -91,6 +90,7 @@ void VulkanContext::init()
     surface.init();
     device.init();
     swapChain.init();
+    bufferCreator.init();
     renderPass.init();
     pipeline.init();
 }

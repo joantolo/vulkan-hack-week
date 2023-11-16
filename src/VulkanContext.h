@@ -1,6 +1,7 @@
 #ifndef VULKAN_CONTEXT_H
 #define VULKAN_CONTEXT_H
 
+#include "VulkanBufferCreator.h"
 #include "VulkanDevice.h"
 #include "VulkanPipeline.h"
 #include "VulkanRenderPass.h"
@@ -21,6 +22,10 @@ class VulkanContext
     const VulkanSurface &getSurface() const { return surface; };
     const VulkanDevice &getDevice() const { return device; };
     const VulkanSwapChain &getSwapChain() const { return swapChain; };
+    const VulkanBufferCreator &getBufferCreator() const
+    {
+        return bufferCreator;
+    };
     const VulkanRenderPass &getRenderPass() const { return renderPass; };
     const VulkanPipeline &getPipeline() const { return pipeline; };
 
@@ -30,6 +35,7 @@ class VulkanContext
     VulkanSurface surface;
     VulkanDevice device;
     VulkanSwapChain swapChain;
+    VulkanBufferCreator bufferCreator;
     VulkanRenderPass renderPass;
     VulkanPipeline pipeline;
 };

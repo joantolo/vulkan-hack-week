@@ -7,19 +7,27 @@ class VulkanBufferCreator
 {
   public:
     VulkanBufferCreator(VulkanContext *contenxt);
-    static void createBuffer(VkDeviceSize size,
-                             VkBufferUsageFlags usage,
-                             VkMemoryPropertyFlags properties,
-                             VkBuffer &buffer,
-                             VkDeviceMemory &bufferMemory);
-    static uint32_t findMemoryType(uint32_t typeFilter,
-                                   VkMemoryPropertyFlags properties);
-    static void copyBuffer(VkBuffer srcBuffer,
-                           VkBuffer dstBuffer,
-                           VkDeviceSize size);
+    ~VulkanBufferCreator();
+    void init();
+    void createBuffer(VkDeviceSize size,
+                      VkBufferUsageFlags usage,
+                      VkMemoryPropertyFlags properties,
+                      VkBuffer &buffer,
+                      VkDeviceMemory &bufferMemory) const;
+    void copyBuffer(VkBuffer srcBuffer,
+                    VkBuffer dstBuffer,
+                    VkDeviceSize size) const;
+    VkCommandBuffer createCommandBuffer() const;
 
   private:
-    static VulkanContext *context;
+    void createCommandPool();
+    uint32_t findMemoryType(uint32_t typeFilter,
+                            VkMemoryPropertyFlags properties) const;
+
+  private:
+    VulkanContext *context;
+
+    VkCommandPool commandPool;
 };
 
 #endif // VULKAN_SURFACE_H
