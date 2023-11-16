@@ -17,7 +17,10 @@ class Triangle
 
   public:
     VkBuffer getVertexBuffer() const { return vertexBuffer; }
-    std::vector<Vertex> getVertices() const { return vertices; }
+    uint32_t getVertexCount() const
+    {
+        return static_cast<uint32_t>(vertices.size());
+    }
 
   private:
     VulkanContext *context;

@@ -134,11 +134,7 @@ void VulkanRenderPass::recordCommandBuffer(const Triangle &triangle,
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-    vkCmdDraw(commandBuffer,
-              static_cast<uint32_t>(triangle.getVertices().size()),
-              1,
-              0,
-              0);
+    vkCmdDraw(commandBuffer, triangle.getVertexCount(), 1, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 
