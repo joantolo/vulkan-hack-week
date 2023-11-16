@@ -25,6 +25,8 @@ void VulkanSwapChain::init()
 
 void VulkanSwapChain::recreate()
 {
+    vkDeviceWaitIdle(context->getDevice());
+
     clear();
     createSwapChain();
     createImageViews();
@@ -221,8 +223,14 @@ VkExtent2D VulkanSwapChain::chooseSwapExtent(
     }
     else
     {
-        int width, height;
-        glfwGetFramebufferSize(context->getWindow(), &width, &height);
+        const VulkanWindow &window = context->getWindow();
+        int width = 0, height = 0;
+        glfwGetFramebufferSize(window, &width, &height);
+        while (width == 0 || height == 0)
+        {
+            glfwGetFramebufferSize(window, &width, &height);
+            glfwWaitEvents();
+        }
 
         VkExtent2D actualExtent = {static_cast<uint32_t>(width),
                                    static_cast<uint32_t>(height)};

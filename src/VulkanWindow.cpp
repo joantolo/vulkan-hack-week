@@ -20,8 +20,6 @@ static void framebufferSizeCallback(GLFWwindow *window, int, int)
     VulkanContext *context =
         reinterpret_cast<VulkanContext *>(glfwGetWindowUserPointer(window));
 
-    vkDeviceWaitIdle(context->getDevice());
-
     const_cast<VulkanSwapChain &>(context->getSwapChain()).recreate();
 }
 

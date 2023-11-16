@@ -57,15 +57,29 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
 
     vkWaitForFences(
         device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device, 1, &currentFrame.inFlightFence);
+
+    const VulkanSwapChain &swapChain = context->getSwapChain();
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(device,
-                          context->getSwapChain(),
-                          UINT64_MAX,
-                          currentFrame.imageAvailableSemaphore,
-                          VK_NULL_HANDLE,
-                          &imageIndex);
+    VkResult result =
+        vkAcquireNextImageKHR(device,
+                              swapChain,
+                              UINT64_MAX,
+                              currentFrame.imageAvailableSemaphore,
+                              VK_NULL_HANDLE,
+                              &imageIndex);
+    if (result == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        const_cast<VulkanSwapChain &>(swapChain).recreate();
+        return;
+    }
+    else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+    {
+        throw std::runtime_error("failed to acquire swap chain image!");
+    }
+
+    // Only reset the fence if we are submitting work
+    vkResetFences(device, 1, &currentFrame.inFlightFence);
 
     const VulkanRenderPass &renderPass = context->getRenderPass();
 
@@ -89,7 +103,7 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    VkResult result = vkQueueSubmit(
+    result = vkQueueSubmit(
         device.getGraphicsQueue(), 1, &submitInfo, currentFrame.inFlightFence);
     if (result != VK_SUCCESS)
     {
@@ -102,13 +116,22 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
-    VkSwapchainKHR swapChains[] = {context->getSwapChain()};
+    VkSwapchainKHR swapChains[] = {swapChain};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr; // Optional
 
-    vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
+    result = vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
+
+    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+    {
+        const_cast<VulkanSwapChain &>(swapChain).recreate();
+    }
+    else if (result != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to present swap chain image!");
+    }
 
     currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
