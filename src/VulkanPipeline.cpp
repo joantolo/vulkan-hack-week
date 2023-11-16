@@ -53,9 +53,8 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
                           &imageIndex);
 
     const VulkanRenderPass &renderPass = context->getRenderPass();
-    const VkCommandBuffer &commandBuffer = renderPass.getCommandBuffer();
-    vkResetCommandBuffer(commandBuffer, 0);
-    renderPass.recordCommandBuffer(commandBuffer, triangle, imageIndex);
+    renderPass.resetCommandBuffer();
+    renderPass.recordCommandBuffer(triangle, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -67,7 +66,7 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &commandBuffer;
+    submitInfo.pCommandBuffers = &renderPass.getCommandBuffer();
 
     VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
     submitInfo.signalSemaphoreCount = 1;

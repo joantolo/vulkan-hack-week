@@ -14,14 +14,12 @@ VulkanRenderPass::~VulkanRenderPass()
 {
     VkDevice device = context->getDevice();
 
-    vkDestroyCommandPool(device, commandPool, nullptr);
     vkDestroyRenderPass(device, renderPass, nullptr);
 }
 
 void VulkanRenderPass::init()
 {
     createRenderPass();
-    createCommandPool();
     createCommandBuffer();
     const_cast<VulkanSwapChain &>(context->getSwapChain()).createFrameBuffers();
 }
@@ -74,48 +72,17 @@ void VulkanRenderPass::createRenderPass()
     }
 }
 
-void VulkanRenderPass::createCommandPool()
-{
-    const VulkanDevice &device = context->getDevice();
-
-    const QueueFamilyIndices &queueFamilyIndices =
-        device.getQueueFamiyIndices();
-
-    VkCommandPoolCreateInfo poolInfo{};
-    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
-
-    VkResult result =
-        vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool);
-    if (result != VK_SUCCESS)
-    {
-        std::string errorMsg("Failed to create command pool: ");
-        errorMsg.append(string_VkResult(result));
-        throw std::runtime_error(errorMsg);
-    }
-}
-
 void VulkanRenderPass::createCommandBuffer()
 {
-    VkCommandBufferAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = commandPool;
-    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
-
-    VkResult result = vkAllocateCommandBuffers(
-        context->getDevice(), &allocInfo, &commandBuffer);
-    if (result != VK_SUCCESS)
-    {
-        std::string errorMsg("Failed to allocate command buffer: ");
-        errorMsg.append(string_VkResult(result));
-        throw std::runtime_error(errorMsg);
-    }
+    commandBuffer = context->getBufferCreator().createCommandBuffer();
 }
 
-void VulkanRenderPass::recordCommandBuffer(const VkCommandBuffer &commandBuffer,
-                                           const Triangle &triangle,
+void VulkanRenderPass::resetCommandBuffer() const
+{
+    vkResetCommandBuffer(commandBuffer, 0);
+}
+
+void VulkanRenderPass::recordCommandBuffer(const Triangle &triangle,
                                            uint32_t imageIndex) const
 {
     VkCommandBufferBeginInfo beginInfo{};
@@ -157,6 +124,7 @@ void VulkanRenderPass::recordCommandBuffer(const VkCommandBuffer &commandBuffer,
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+
     VkRect2D scissor{};
     scissor.offset = {0, 0};
     scissor.extent = swapChainExtent;
