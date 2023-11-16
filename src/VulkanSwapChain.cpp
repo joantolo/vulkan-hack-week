@@ -14,7 +14,7 @@ VulkanSwapChain::VulkanSwapChain(VulkanContext *context) : context(context) {}
 
 VulkanSwapChain::~VulkanSwapChain()
 {
-    clearSwapChain();
+    clear();
 }
 
 void VulkanSwapChain::init()
@@ -25,7 +25,7 @@ void VulkanSwapChain::init()
 
 void VulkanSwapChain::recreate()
 {
-    clearSwapChain();
+    clear();
     createSwapChain();
     createImageViews();
     createFrameBuffers();
@@ -94,25 +94,24 @@ void VulkanSwapChain::createSwapChain()
     }
 
     vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
-    swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(
-        device, swapChain, &imageCount, swapChainImages.data());
+    images.resize(imageCount);
+    vkGetSwapchainImagesKHR(device, swapChain, &imageCount, images.data());
 
-    swapChainImageFormat = surfaceFormat.format;
-    swapChainExtent = extent;
+    imageFormat = surfaceFormat.format;
+    this->extent = extent;
 }
 
 void VulkanSwapChain::createImageViews()
 {
-    swapChainImageViews.resize(swapChainImages.size());
-    for (size_t i = 0; i < swapChainImages.size(); i++)
+    imageViews.resize(images.size());
+    for (size_t i = 0; i < images.size(); i++)
     {
         VkImageViewCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 
-        createInfo.image = swapChainImages[i];
+        createInfo.image = images[i];
         createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        createInfo.format = swapChainImageFormat;
+        createInfo.format = imageFormat;
 
         createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
         createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
@@ -125,10 +124,8 @@ void VulkanSwapChain::createImageViews()
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        VkResult result = vkCreateImageView(context->getDevice(),
-                                            &createInfo,
-                                            nullptr,
-                                            &swapChainImageViews[i]);
+        VkResult result = vkCreateImageView(
+            context->getDevice(), &createInfo, nullptr, &imageViews[i]);
         if (result != VK_SUCCESS)
         {
             std::string errorMsg("Failed to create Image View: ");
@@ -140,12 +137,12 @@ void VulkanSwapChain::createImageViews()
 
 void VulkanSwapChain::createFrameBuffers()
 {
-    swapChainFramebuffers.resize(swapChainImageViews.size());
+    frameBuffers.resize(imageViews.size());
 
-    for (size_t i = 0; i < swapChainImageViews.size(); i++)
+    for (size_t i = 0; i < imageViews.size(); i++)
     {
         VkImageView attachments[] = {
-            swapChainImageViews[i],
+            imageViews[i],
         };
 
         VkFramebufferCreateInfo frameBufferInfo{};
@@ -153,14 +150,12 @@ void VulkanSwapChain::createFrameBuffers()
         frameBufferInfo.renderPass = context->getRenderPass();
         frameBufferInfo.attachmentCount = 1;
         frameBufferInfo.pAttachments = attachments;
-        frameBufferInfo.width = swapChainExtent.width;
-        frameBufferInfo.height = swapChainExtent.height;
+        frameBufferInfo.width = extent.width;
+        frameBufferInfo.height = extent.height;
         frameBufferInfo.layers = 1;
 
-        VkResult result = vkCreateFramebuffer(context->getDevice(),
-                                              &frameBufferInfo,
-                                              nullptr,
-                                              &swapChainFramebuffers[i]);
+        VkResult result = vkCreateFramebuffer(
+            context->getDevice(), &frameBufferInfo, nullptr, &frameBuffers[i]);
         if (result != VK_SUCCESS)
         {
             std::string errorMsg("Failed to create FrameBuffer: ");
@@ -170,21 +165,21 @@ void VulkanSwapChain::createFrameBuffers()
     }
 }
 
-void VulkanSwapChain::clearSwapChain()
+void VulkanSwapChain::clear()
 {
     VkDevice device = context->getDevice();
 
-    vkDestroySwapchainKHR(device, swapChain, nullptr);
-
-    for (auto imageView : swapChainImageViews)
+    for (auto imageView : imageViews)
     {
         vkDestroyImageView(device, imageView, nullptr);
     }
 
-    for (auto framebuffer : swapChainFramebuffers)
+    for (auto framebuffer : frameBuffers)
     {
         vkDestroyFramebuffer(device, framebuffer, nullptr);
     }
+
+    vkDestroySwapchainKHR(device, swapChain, nullptr);
 }
 
 VkSurfaceFormatKHR VulkanSwapChain::chooseSwapSurfaceFormat(

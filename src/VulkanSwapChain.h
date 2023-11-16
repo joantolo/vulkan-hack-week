@@ -17,7 +17,7 @@ class VulkanSwapChain
   private:
     void createSwapChain();
     void createImageViews();
-    void clearSwapChain();
+    void clear();
     VkSurfaceFormatKHR chooseSwapSurfaceFormat(
         const std::vector<VkSurfaceFormatKHR> &availableFormats) const;
     VkPresentModeKHR chooseSwapPresentMode(
@@ -26,11 +26,11 @@ class VulkanSwapChain
         const VkSurfaceCapabilitiesKHR &capabilities) const;
 
   public:
-    VkFormat getImageFormat() const { return swapChainImageFormat; }
-    VkExtent2D getExtent() const { return swapChainExtent; }
+    VkFormat getImageFormat() const { return imageFormat; }
+    VkExtent2D getExtent() const { return extent; }
     const std::vector<VkFramebuffer> &getFrameBuffers() const
     {
-        return swapChainFramebuffers;
+        return frameBuffers;
     }
     operator VkSwapchainKHR() const { return swapChain; }
 
@@ -39,10 +39,10 @@ class VulkanSwapChain
 
     VkSwapchainKHR swapChain;
 
-    std::vector<VkImageView> swapChainImageViews;
-    std::vector<VkImage> swapChainImages;
-    std::vector<VkFramebuffer> swapChainFramebuffers;
-    VkFormat swapChainImageFormat;
-    VkExtent2D swapChainExtent;
+    std::vector<VkImageView> imageViews;
+    std::vector<VkImage> images;
+    std::vector<VkFramebuffer> frameBuffers;
+    VkFormat imageFormat;
+    VkExtent2D extent;
 };
 #endif // VULKAN_SWAP_CHAIN_H
