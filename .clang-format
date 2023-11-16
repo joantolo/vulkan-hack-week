@@ -4,6 +4,8 @@ AllowShortFunctionsOnASingleLine: Inline
 AllowAllParametersOfDeclarationOnNextLine: false
 BinPackArguments: false
 BinPackParameters: false
+AlignAfterOpenBracket: Align
+PackConstructorInitializers: CurrentLine
 Language: Cpp
 ColumnLimit: 80
 ---
