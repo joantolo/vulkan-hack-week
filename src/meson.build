@@ -12,7 +12,7 @@ sources = files([
   'VulkanApp.cpp',
   'VulkanDebugger.cpp',
   'VulkanDevice.cpp',
-  'VulkanBuffer.cpp',
+  'VulkanBufferCreator.cpp',
   'VulkanPipeline.cpp',
   'VulkanRenderPass.cpp',
   'VulkanSwapChain.cpp',

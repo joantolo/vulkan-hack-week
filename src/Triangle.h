@@ -12,7 +12,7 @@
 class Triangle
 {
   public:
-    void init(VulkanDevice *device, VulkanBuffer *bufferCreator);
+    void init(VulkanDevice *device, VulkanBufferCreator *bufferCreator);
     void clear();
 
   private:
@@ -31,7 +31,7 @@ class Triangle
     VkDeviceMemory vertexBufferMemory;
 
     VulkanDevice *device;
-    VulkanBuffer *bufferCreator;
+    VulkanBufferCreator *bufferCreator;
 };
 
 #endif // TRIANGLE_H

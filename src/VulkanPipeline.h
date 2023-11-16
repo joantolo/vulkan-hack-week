@@ -5,7 +5,7 @@
 
 #include <vector>
 
-#include "VulkanBuffer.h"
+#include "VulkanBufferCreator.h"
 #include "VulkanRenderPass.h"
 
 #include "VulkanTypes.h"
@@ -39,7 +39,7 @@ class VulkanPipeline
     VkPipelineLayout createPipelineLayout();
 
   public:
-    VulkanBuffer &getBufferCreator() { return bufferCreator; }
+    VulkanBufferCreator &getBufferCreator() { return bufferCreator; }
     operator VkPipeline() const { return graphicsPipeline; }
 
   private:
@@ -47,7 +47,7 @@ class VulkanPipeline
     VkPipelineLayout pipelineLayout;
 
     VulkanRenderPass renderPass;
-    VulkanBuffer bufferCreator;
+    VulkanBufferCreator bufferCreator;
 
     VkShaderModule vertShaderModule;
     VkShaderModule fragShaderModule;

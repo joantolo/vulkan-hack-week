@@ -8,7 +8,7 @@
 #include <vector>
 
 class Triangle;
-class VulkanBuffer;
+class VulkanBufferCreator;
 class VulkanDebugger;
 class VulkanDevice;
 class VulkanPipeline;

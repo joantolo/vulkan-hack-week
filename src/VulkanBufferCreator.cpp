@@ -6,21 +6,22 @@
 #include "VulkanDevice.h"
 #include "VulkanRenderPass.h"
 
-#include "VulkanBuffer.h"
+#include "VulkanBufferCreator.h"
 
-void VulkanBuffer::init(VulkanDevice *device, VulkanRenderPass *renderPass)
+void VulkanBufferCreator::init(VulkanDevice *device,
+                               VulkanRenderPass *renderPass)
 {
     this->device = device;
     this->renderPass = renderPass;
 }
 
-void VulkanBuffer::clear() {}
+void VulkanBufferCreator::clear() {}
 
-void VulkanBuffer::createBuffer(VkDeviceSize size,
-                                VkBufferUsageFlags usage,
-                                VkMemoryPropertyFlags properties,
-                                VkBuffer &buffer,
-                                VkDeviceMemory &bufferMemory)
+void VulkanBufferCreator::createBuffer(VkDeviceSize size,
+                                       VkBufferUsageFlags usage,
+                                       VkMemoryPropertyFlags properties,
+                                       VkBuffer &buffer,
+                                       VkDeviceMemory &bufferMemory)
 {
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -58,8 +59,8 @@ void VulkanBuffer::createBuffer(VkDeviceSize size,
     vkBindBufferMemory(*this->device, buffer, bufferMemory, 0);
 }
 
-uint32_t VulkanBuffer::findMemoryType(uint32_t typeFilter,
-                                      VkMemoryPropertyFlags properties)
+uint32_t VulkanBufferCreator::findMemoryType(uint32_t typeFilter,
+                                             VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
     vkGetPhysicalDeviceMemoryProperties(this->device->getPhysicalDevice(),
@@ -78,9 +79,9 @@ uint32_t VulkanBuffer::findMemoryType(uint32_t typeFilter,
     throw std::runtime_error("Failed to find suitable memory type!");
 }
 
-void VulkanBuffer::copyBuffer(VkBuffer srcBuffer,
-                              VkBuffer dstBuffer,
-                              VkDeviceSize size)
+void VulkanBufferCreator::copyBuffer(VkBuffer srcBuffer,
+                                     VkBuffer dstBuffer,
+                                     VkDeviceSize size)
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

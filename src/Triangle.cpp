@@ -5,12 +5,12 @@
 #include <cstring>
 #include <iostream>
 
-#include "VulkanBuffer.h"
+#include "VulkanBufferCreator.h"
 #include "VulkanDevice.h"
 
 #include "Triangle.h"
 
-void Triangle::init(VulkanDevice *device, VulkanBuffer *bufferCreator)
+void Triangle::init(VulkanDevice *device, VulkanBufferCreator *bufferCreator)
 {
     this->device = device;
     this->bufferCreator = bufferCreator;

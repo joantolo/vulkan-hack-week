@@ -5,7 +5,7 @@
 
 #include "VulkanTypes.h"
 
-class VulkanBuffer
+class VulkanBufferCreator
 {
   public:
     void init(VulkanDevice *device, VulkanRenderPass *renderPass);
