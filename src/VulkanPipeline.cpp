@@ -1,76 +1,66 @@
-#include "config.h"
-
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 
 #include <iostream>
-#include <memory>
-#include <vector>
-#include <vulkan/vulkan_core.h>
 
-#include "VulkanDevice.h"
-#include "VulkanSwapChain.h"
+#include "config.h"
+
+#include "VulkanContext.h"
 #include "utils.h"
 
 #include "VulkanPipeline.h"
 
-std::vector<VkDynamicState> dynamicStates = {VK_DYNAMIC_STATE_VIEWPORT,
-                                             VK_DYNAMIC_STATE_SCISSOR};
+static const std::vector<VkDynamicState> dynamicStates = {
+    VK_DYNAMIC_STATE_VIEWPORT,
+    VK_DYNAMIC_STATE_SCISSOR};
 
-void VulkanPipeline::init(VulkanDevice *device,
-                          VulkanSwapChain *swapChain,
-                          Triangle *triangle)
+VulkanPipeline::VulkanPipeline(VulkanContext *context) : context(context) {}
+
+VulkanPipeline::~VulkanPipeline()
 {
-    this->device = device;
-    this->swapChain = swapChain;
-    this->triangle = triangle;
+    VkDevice device = context->getDevice();
 
-    this->renderPass.init(this->device, this->swapChain, this);
-    this->bufferCreator.init(this->device, &this->renderPass);
+    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+    vkDestroyFence(device, inFlightFence, nullptr);
 
+    vkDestroyShaderModule(device, fragShaderModule, nullptr);
+    vkDestroyShaderModule(device, vertShaderModule, nullptr);
+
+    vkDestroyPipeline(device, graphicsPipeline, nullptr);
+    vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+}
+
+void VulkanPipeline::init()
+{
     createPipeline();
     createSyncObjects();
 }
 
-void VulkanPipeline::clear()
+void VulkanPipeline::drawFrame(const Triangle &triangle) const
 {
-    vkDestroySemaphore(*this->device, this->imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(*this->device, this->renderFinishedSemaphore, nullptr);
-    vkDestroyFence(*this->device, this->inFlightFence, nullptr);
+    const VulkanDevice &device = context->getDevice();
 
-    vkDestroyShaderModule(*this->device, this->fragShaderModule, nullptr);
-    vkDestroyShaderModule(*this->device, this->vertShaderModule, nullptr);
-
-    this->bufferCreator.clear();
-    this->renderPass.clear();
-
-    vkDestroyPipeline(*this->device, this->graphicsPipeline, nullptr);
-    vkDestroyPipelineLayout(*this->device, this->pipelineLayout, nullptr);
-}
-
-void VulkanPipeline::drawFrame()
-{
-    vkWaitForFences(
-        *this->device, 1, &this->inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(*this->device, 1, &this->inFlightFence);
+    vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(device, 1, &inFlightFence);
 
     uint32_t imageIndex;
-    vkAcquireNextImageKHR(*this->device,
-                          *this->swapChain,
+    vkAcquireNextImageKHR(device,
+                          context->getSwapChain(),
                           UINT64_MAX,
-                          this->imageAvailableSemaphore,
+                          imageAvailableSemaphore,
                           VK_NULL_HANDLE,
                           &imageIndex);
 
-    VkCommandBuffer commandBuffer = this->renderPass.getCommandBuffer();
+    const VulkanRenderPass &renderPass = context->getRenderPass();
+    const VkCommandBuffer &commandBuffer = renderPass.getCommandBuffer();
     vkResetCommandBuffer(commandBuffer, 0);
-    this->renderPass.recordCommandBuffer(
-        commandBuffer, *this->triangle, imageIndex);
+    renderPass.recordCommandBuffer(commandBuffer, triangle, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {this->imageAvailableSemaphore};
+    VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
@@ -79,12 +69,12 @@ void VulkanPipeline::drawFrame()
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    VkSemaphore signalSemaphores[] = {this->renderFinishedSemaphore};
+    VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    VkResult result = vkQueueSubmit(
-        this->device->getGraphicsQueue(), 1, &submitInfo, this->inFlightFence);
+    VkResult result =
+        vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo, inFlightFence);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to submit draw commant buffer: ");
@@ -96,13 +86,13 @@ void VulkanPipeline::drawFrame()
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pWaitSemaphores = signalSemaphores;
-    VkSwapchainKHR swapChains[] = {*this->swapChain};
+    VkSwapchainKHR swapChains[] = {context->getSwapChain()};
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = swapChains;
     presentInfo.pImageIndices = &imageIndex;
     presentInfo.pResults = nullptr; // Optional
 
-    vkQueuePresentKHR(this->device->getPresentQueue(), &presentInfo);
+    vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
 }
 
 void VulkanPipeline::createPipeline()
@@ -145,17 +135,17 @@ void VulkanPipeline::createPipeline()
 
     pipelineInfo.layout = createPipelineLayout();
 
-    pipelineInfo.renderPass = this->renderPass;
+    pipelineInfo.renderPass = context->getRenderPass();
     pipelineInfo.subpass = 0;
     pipelineInfo.basePipelineHandle = VK_NULL_HANDLE; // Optional
     pipelineInfo.basePipelineIndex = -1;              // Optional
 
-    VkResult result = vkCreateGraphicsPipelines(*this->device,
+    VkResult result = vkCreateGraphicsPipelines(context->getDevice(),
                                                 VK_NULL_HANDLE,
                                                 1,
                                                 &pipelineInfo,
                                                 nullptr,
-                                                &this->graphicsPipeline);
+                                                &graphicsPipeline);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to create graphicsPipeline: ");
@@ -173,16 +163,14 @@ void VulkanPipeline::createSyncObjects()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    if (vkCreateSemaphore(*this->device,
-                          &semaphoreInfo,
-                          nullptr,
-                          &this->imageAvailableSemaphore) != VK_SUCCESS ||
-        vkCreateSemaphore(*this->device,
-                          &semaphoreInfo,
-                          nullptr,
-                          &this->renderFinishedSemaphore) != VK_SUCCESS ||
-        vkCreateFence(
-            *this->device, &fenceInfo, nullptr, &this->inFlightFence) !=
+    VkDevice device = context->getDevice();
+    if (vkCreateSemaphore(
+            device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) !=
+            VK_SUCCESS ||
+        vkCreateSemaphore(
+            device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) !=
+            VK_SUCCESS ||
+        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) !=
             VK_SUCCESS)
     {
         throw std::runtime_error("failed to create semaphores!");
@@ -192,21 +180,21 @@ void VulkanPipeline::createSyncObjects()
 std::vector<VkPipelineShaderStageCreateInfo> VulkanPipeline::createShaders()
 {
     auto vertShaderCode = readFile(SHADERS_DIR "/vert.spv");
-    this->vertShaderModule = createShaderModule(vertShaderCode);
+    vertShaderModule = createShaderModule(vertShaderCode);
     VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
     vertShaderStageInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-    vertShaderStageInfo.module = this->vertShaderModule;
+    vertShaderStageInfo.module = vertShaderModule;
     vertShaderStageInfo.pName = "main";
 
     auto fragShaderCode = readFile(SHADERS_DIR "/frag.spv");
-    this->fragShaderModule = createShaderModule(fragShaderCode);
+    fragShaderModule = createShaderModule(fragShaderCode);
     VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
     fragShaderStageInfo.sType =
         VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    fragShaderStageInfo.module = this->fragShaderModule;
+    fragShaderStageInfo.module = fragShaderModule;
     fragShaderStageInfo.pName = "main";
 
     return std::vector<VkPipelineShaderStageCreateInfo>{vertShaderStageInfo,
@@ -222,7 +210,7 @@ VkShaderModule VulkanPipeline::createShaderModule(const std::vector<char> &code)
 
     VkShaderModule shaderModule;
     VkResult result = vkCreateShaderModule(
-        *this->device, &createInfo, nullptr, &shaderModule);
+        context->getDevice(), &createInfo, nullptr, &shaderModule);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to create shader module: ");
@@ -263,17 +251,18 @@ VkPipelineInputAssemblyStateCreateInfo VulkanPipeline::createInputAssembly()
 
 VkPipelineViewportStateCreateInfo VulkanPipeline::createViewportState()
 {
+    const VkExtent2D &swapChainExtent = context->getSwapChain().getExtent();
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;
-    viewport.width = (float)this->swapChain->getExtent().width;
-    viewport.height = (float)this->swapChain->getExtent().height;
+    viewport.width = (float)swapChainExtent.width;
+    viewport.height = (float)swapChainExtent.height;
     viewport.minDepth = 0.0f;
     viewport.maxDepth = 1.0f;
 
     VkRect2D scissor{};
     scissor.offset = {0, 0};
-    scissor.extent = this->swapChain->getExtent();
+    scissor.extent = swapChainExtent;
 
     VkPipelineViewportStateCreateInfo viewportState{};
     viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -371,7 +360,7 @@ VkPipelineLayout VulkanPipeline::createPipelineLayout()
     pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
     VkResult result = vkCreatePipelineLayout(
-        *this->device, &pipelineLayoutInfo, nullptr, &this->pipelineLayout);
+        context->getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to create pipeline layout: ");
@@ -379,5 +368,5 @@ VkPipelineLayout VulkanPipeline::createPipelineLayout()
         throw std::runtime_error(errorMsg);
     }
 
-    return this->pipelineLayout;
+    return pipelineLayout;
 }

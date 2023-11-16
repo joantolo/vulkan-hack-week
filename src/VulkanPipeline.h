@@ -1,23 +1,15 @@
 #ifndef VULKAN_PIPELINE_H
 #define VULKAN_PIPELINE_H
 
-#include <vulkan/vulkan.h>
-
-#include <vector>
-
-#include "VulkanBufferCreator.h"
-#include "VulkanRenderPass.h"
-
 #include "VulkanTypes.h"
 
 class VulkanPipeline
 {
   public:
-    void init(VulkanDevice *device,
-              VulkanSwapChain *swapChain,
-              Triangle *triangle);
-    void clear();
-    void drawFrame();
+    VulkanPipeline(VulkanContext *context);
+    ~VulkanPipeline();
+    void init();
+    void drawFrame(const Triangle &triangle) const;
 
   private:
     void createPipeline();
@@ -39,15 +31,13 @@ class VulkanPipeline
     VkPipelineLayout createPipelineLayout();
 
   public:
-    VulkanBufferCreator &getBufferCreator() { return bufferCreator; }
     operator VkPipeline() const { return graphicsPipeline; }
 
   private:
+    VulkanContext *context;
+
     VkPipeline graphicsPipeline;
     VkPipelineLayout pipelineLayout;
-
-    VulkanRenderPass renderPass;
-    VulkanBufferCreator bufferCreator;
 
     VkShaderModule vertShaderModule;
     VkShaderModule fragShaderModule;
@@ -55,10 +45,5 @@ class VulkanPipeline
     VkSemaphore imageAvailableSemaphore;
     VkSemaphore renderFinishedSemaphore;
     VkFence inFlightFence;
-
-    VulkanDevice *device;
-    VulkanSwapChain *swapChain;
-
-    Triangle *triangle;
 };
 #endif // VULKAN_PIPELINE_H

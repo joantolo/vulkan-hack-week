@@ -1,10 +1,6 @@
 #ifndef TRIANGLE_H
 #define TRIANGLE_H
 
-#include <glm/glm.hpp>
-#include <vulkan/vulkan.h>
-
-#include <array>
 #include <vector>
 
 #include "VulkanTypes.h"
@@ -12,8 +8,9 @@
 class Triangle
 {
   public:
-    void init(VulkanDevice *device, VulkanBufferCreator *bufferCreator);
-    void clear();
+    Triangle(VulkanContext *context);
+    ~Triangle();
+    void init();
 
   private:
     void createVertexBuffer();
@@ -23,15 +20,14 @@ class Triangle
     std::vector<Vertex> getVertices() const { return vertices; }
 
   private:
+    VulkanContext *context;
+
     const std::vector<Vertex> vertices = {{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
                                           {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
                                           {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
 
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
-
-    VulkanDevice *device;
-    VulkanBufferCreator *bufferCreator;
 };
 
 #endif // TRIANGLE_H

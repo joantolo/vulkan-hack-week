@@ -1,26 +1,21 @@
 #ifndef VULKAN_SURFACE_H
 #define VULKAN_SURFACE_H
 
-#include <vulkan/vulkan.h>
-
 #include "VulkanTypes.h"
 
 class VulkanSurface
 {
   public:
-    void init(VkInstance *instance, VulkanWindow *window);
-    void clear();
-
-  private:
-    void createSurface();
+    VulkanSurface(VulkanContext *context);
+    ~VulkanSurface();
+    void init();
 
   public:
     operator VkSurfaceKHR() const { return surface; }
 
   private:
-    VkSurfaceKHR surface;
+    VulkanContext *context;
 
-    VkInstance *instance;
-    VulkanWindow *window;
+    VkSurfaceKHR surface;
 };
 #endif // VULKAN_SURFACE_H

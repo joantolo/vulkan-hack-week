@@ -1,56 +1,55 @@
-#include <glm/glm.hpp>
-#include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 
 #include <cstring>
-#include <iostream>
 
 #include "VulkanBufferCreator.h"
-#include "VulkanDevice.h"
+#include "VulkanContext.h"
 
 #include "Triangle.h"
 
-void Triangle::init(VulkanDevice *device, VulkanBufferCreator *bufferCreator)
-{
-    this->device = device;
-    this->bufferCreator = bufferCreator;
+Triangle::Triangle(VulkanContext *context) : context(context) {}
 
-    createVertexBuffer();
+Triangle::~Triangle()
+{
+    VkDevice device = context->getDevice();
+
+    vkDestroyBuffer(device, vertexBuffer, nullptr);
+    vkFreeMemory(device, vertexBufferMemory, nullptr);
 }
 
-void Triangle::clear()
+void Triangle::init()
 {
-    vkDestroyBuffer(*this->device, this->vertexBuffer, nullptr);
-    vkFreeMemory(*this->device, this->vertexBufferMemory, nullptr);
+    createVertexBuffer();
 }
 
 void Triangle::createVertexBuffer()
 {
-    VkDeviceSize bufferSize = sizeof(this->vertices[0]) * this->vertices.size();
+    VkDeviceSize bufferSize = sizeof(vertices[0]) * vertices.size();
 
     VkBuffer stagingBuffer;
     VkDeviceMemory stagingBufferMemory;
-    this->bufferCreator->createBuffer(bufferSize,
+    VulkanBufferCreator::createBuffer(bufferSize,
                                       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                       stagingBuffer,
                                       stagingBufferMemory);
 
+    VkDevice device = context->getDevice();
     void *data;
-    vkMapMemory(*this->device, stagingBufferMemory, 0, bufferSize, 0, &data);
-    memcpy(data, this->vertices.data(), (size_t)bufferSize);
-    vkUnmapMemory(*this->device, stagingBufferMemory);
+    vkMapMemory(device, stagingBufferMemory, 0, bufferSize, 0, &data);
+    memcpy(data, vertices.data(), (size_t)bufferSize);
+    vkUnmapMemory(device, stagingBufferMemory);
 
-    this->bufferCreator->createBuffer(bufferSize,
+    VulkanBufferCreator::createBuffer(bufferSize,
                                       VK_BUFFER_USAGE_TRANSFER_DST_BIT |
                                           VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                                      this->vertexBuffer,
-                                      this->vertexBufferMemory);
+                                      vertexBuffer,
+                                      vertexBufferMemory);
 
-    this->bufferCreator->copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
+    VulkanBufferCreator::copyBuffer(stagingBuffer, vertexBuffer, bufferSize);
 
-    vkDestroyBuffer(*this->device, stagingBuffer, nullptr);
-    vkFreeMemory(*this->device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingBufferMemory, nullptr);
 }

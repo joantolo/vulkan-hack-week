@@ -6,34 +6,38 @@
 class VulkanDevice
 {
   public:
-    void init(VkInstance *instance, VulkanSurface *surface);
-    void clear();
+    VulkanDevice(VulkanContext *context);
+    ~VulkanDevice();
+    void init();
 
   private:
     void pickPhysicalDevice();
     void createLogicalDevice();
-    bool isDeviceSuitable(VkPhysicalDevice device);
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device);
-    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
-    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
+    bool isDeviceSuitable(VkPhysicalDevice device) const;
+    bool checkDeviceExtensionSupport(VkPhysicalDevice device) const;
+    SwapChainSupportDetails querySwapChainSupport(
+        VkPhysicalDevice device) const;
+    QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const;
 
   public:
-    QueueFamilyIndices getQueueFamiyIndices() const
+    const QueueFamilyIndices &getQueueFamiyIndices() const
     {
         return queueFamilyIndices;
     }
-    SwapChainSupportDetails getSwapChainSupport() { return swapChainSupport; }
+    const SwapChainSupportDetails &getSwapChainSupport() const
+    {
+        return swapChainSupport;
+    }
     VkQueue getGraphicsQueue() const { return graphicsQueue; }
     VkQueue getPresentQueue() const { return presentQueue; }
     VkPhysicalDevice getPhysicalDevice() const { return physicalDevice; }
     operator VkDevice() const { return device; }
 
   private:
+    VulkanContext *context;
+
     VkDevice device;
     VkPhysicalDevice physicalDevice;
-
-    VkInstance *instance;
-    VulkanSurface *surface;
 
     VkQueue graphicsQueue;
     VkQueue presentQueue;

@@ -1,40 +1,35 @@
-#include <glm/gtx/string_cast.hpp>
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 
 #include <iostream>
 
-#include "VulkanDevice.h"
-#include "VulkanPipeline.h"
-#include "VulkanSwapChain.h"
+#include "Triangle.h"
+#include "VulkanContext.h"
 
 #include "VulkanRenderPass.h"
 
-void VulkanRenderPass::init(VulkanDevice *device,
-                            VulkanSwapChain *swapChain,
-                            VulkanPipeline *pipeline)
-{
-    this->device = device;
-    this->swapChain = swapChain;
-    this->pipeline = pipeline;
+VulkanRenderPass::VulkanRenderPass(VulkanContext *context) : context(context) {}
 
+VulkanRenderPass::~VulkanRenderPass()
+{
+    VkDevice device = context->getDevice();
+
+    vkDestroyCommandPool(device, commandPool, nullptr);
+    vkDestroyRenderPass(device, renderPass, nullptr);
+}
+
+void VulkanRenderPass::init()
+{
     createRenderPass();
     createCommandPool();
     createCommandBuffer();
-    this->swapChain->setRenderPass(this);
-    this->swapChain->createFrameBuffers();
-}
-
-void VulkanRenderPass::clear()
-{
-    vkDestroyCommandPool(*this->device, this->commandPool, nullptr);
-    vkDestroyRenderPass(*this->device, this->renderPass, nullptr);
+    const_cast<VulkanSwapChain &>(context->getSwapChain()).createFrameBuffers();
 }
 
 void VulkanRenderPass::createRenderPass()
 {
     VkAttachmentDescription colorAttachment{};
-    colorAttachment.format = this->swapChain->getImageFormat();
+    colorAttachment.format = context->getSwapChain().getImageFormat();
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
     colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
     colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -70,7 +65,7 @@ void VulkanRenderPass::createRenderPass()
     renderPassInfo.pDependencies = &dependency;
 
     VkResult result = vkCreateRenderPass(
-        *this->device, &renderPassInfo, nullptr, &this->renderPass);
+        context->getDevice(), &renderPassInfo, nullptr, &renderPass);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to create render pass: ");
@@ -81,16 +76,18 @@ void VulkanRenderPass::createRenderPass()
 
 void VulkanRenderPass::createCommandPool()
 {
-    QueueFamilyIndices queueFamilyIndices =
-        this->device->getQueueFamiyIndices();
+    const VulkanDevice &device = context->getDevice();
+
+    const QueueFamilyIndices &queueFamilyIndices =
+        device.getQueueFamiyIndices();
 
     VkCommandPoolCreateInfo poolInfo{};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
     poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-    VkResult result = vkCreateCommandPool(
-        *this->device, &poolInfo, nullptr, &this->commandPool);
+    VkResult result =
+        vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to create command pool: ");
@@ -103,12 +100,12 @@ void VulkanRenderPass::createCommandBuffer()
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = this->commandPool;
+    allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     allocInfo.commandBufferCount = 1;
 
     VkResult result = vkAllocateCommandBuffers(
-        *this->device, &allocInfo, &this->commandBuffer);
+        context->getDevice(), &allocInfo, &commandBuffer);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to allocate command buffer: ");
@@ -117,9 +114,9 @@ void VulkanRenderPass::createCommandBuffer()
     }
 }
 
-void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
-                                           Triangle triangle,
-                                           uint32_t imageIndex)
+void VulkanRenderPass::recordCommandBuffer(const VkCommandBuffer &commandBuffer,
+                                           const Triangle &triangle,
+                                           uint32_t imageIndex) const
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -134,12 +131,13 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
         throw std::runtime_error(errorMsg);
     }
 
+    const VulkanSwapChain &swapChain = context->getSwapChain();
     VkRenderPassBeginInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = this->renderPass;
-    renderPassInfo.framebuffer = this->swapChain->getFrameBuffers()[imageIndex];
+    renderPassInfo.renderPass = renderPass;
+    renderPassInfo.framebuffer = swapChain.getFrameBuffers()[imageIndex];
     renderPassInfo.renderArea.offset = {0, 0};
-    renderPassInfo.renderArea.extent = this->swapChain->getExtent();
+    renderPassInfo.renderArea.extent = swapChain.getExtent();
     VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
     renderPassInfo.clearValueCount = 1;
     renderPassInfo.pClearValues = &clearColor;
@@ -148,9 +146,9 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
         commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     vkCmdBindPipeline(
-        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, *this->pipeline);
+        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context->getPipeline());
 
-    VkExtent2D swapChainExtent = this->swapChain->getExtent();
+    const VkExtent2D &swapChainExtent = swapChain.getExtent();
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;

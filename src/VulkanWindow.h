@@ -1,18 +1,21 @@
 #ifndef GLFW_WINDOW_H
 #define GLFW_WINDOW_H
 
-#include <GLFW/glfw3.h>
+#include "VulkanTypes.h"
 
 class VulkanWindow
 {
   public:
-    void init(size_t width, size_t heigth, const char *name);
-    void clear();
+    VulkanWindow(VulkanContext *context);
+    ~VulkanWindow();
+    void init();
 
   public:
-    operator GLFWwindow *() const { return window; }
+    operator GlfwWindow() const { return window; }
 
   private:
-    GLFWwindow *window;
+    VulkanContext *context;
+
+    GlfwWindow window;
 };
 #endif // VULKAN_SURFACE_H

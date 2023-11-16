@@ -1,3 +1,4 @@
+#include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 
 #include <cstring>
@@ -43,13 +44,16 @@ void VulkanDebugger::clear()
 
 void VulkanDebugger::setupDebugMessenger()
 {
-    if (CreateDebugUtilsMessengerEXT(*VulkanDebugger::instance,
+    VkResult result =
+        CreateDebugUtilsMessengerEXT(*VulkanDebugger::instance,
                                      &VulkanDebugger::debugCreateInfo,
                                      nullptr,
-                                     &VulkanDebugger::debugMessenger) !=
-        VK_SUCCESS)
+                                     &VulkanDebugger::debugMessenger);
+    if (result != VK_SUCCESS)
     {
-        throw std::runtime_error("Failed to set up debug messenger!");
+        std::string errorMsg("Failed to set up debug messenger: ");
+        errorMsg.append(string_VkResult(result));
+        throw std::runtime_error(errorMsg);
     }
 }
 

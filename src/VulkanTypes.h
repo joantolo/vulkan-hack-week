@@ -1,14 +1,17 @@
 #ifndef VULKAN_TYPES_H
 #define VULKAN_TYPES_H
 
+#include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
 #include <optional>
 #include <vector>
 
+typedef GLFWwindow *GlfwWindow;
 class Triangle;
 class VulkanBufferCreator;
+class VulkanContext;
 class VulkanDebugger;
 class VulkanDevice;
 class VulkanPipeline;

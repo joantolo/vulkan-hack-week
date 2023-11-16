@@ -3,19 +3,16 @@
 
 #include <iostream>
 
-#include "VulkanDevice.h"
-#include "VulkanRenderPass.h"
+#include "VulkanContext.h"
 
 #include "VulkanBufferCreator.h"
 
-void VulkanBufferCreator::init(VulkanDevice *device,
-                               VulkanRenderPass *renderPass)
-{
-    this->device = device;
-    this->renderPass = renderPass;
-}
+VulkanContext *VulkanBufferCreator::context;
 
-void VulkanBufferCreator::clear() {}
+VulkanBufferCreator::VulkanBufferCreator(VulkanContext *context)
+{
+    VulkanBufferCreator::context = context;
+}
 
 void VulkanBufferCreator::createBuffer(VkDeviceSize size,
                                        VkBufferUsageFlags usage,
@@ -29,8 +26,8 @@ void VulkanBufferCreator::createBuffer(VkDeviceSize size,
     bufferInfo.usage = usage;
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VkResult result =
-        vkCreateBuffer(*this->device, &bufferInfo, nullptr, &buffer);
+    const VulkanDevice &device = context->getDevice();
+    VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to create buffer: ");
@@ -39,7 +36,7 @@ void VulkanBufferCreator::createBuffer(VkDeviceSize size,
     }
 
     VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(*this->device, buffer, &memRequirements);
+    vkGetBufferMemoryRequirements(device, buffer, &memRequirements);
 
     VkMemoryAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
@@ -47,8 +44,7 @@ void VulkanBufferCreator::createBuffer(VkDeviceSize size,
     allocInfo.memoryTypeIndex =
         findMemoryType(memRequirements.memoryTypeBits, properties);
 
-    result =
-        vkAllocateMemory(*this->device, &allocInfo, nullptr, &bufferMemory);
+    result = vkAllocateMemory(device, &allocInfo, nullptr, &bufferMemory);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to allocate buffer memory: ");
@@ -56,15 +52,15 @@ void VulkanBufferCreator::createBuffer(VkDeviceSize size,
         throw std::runtime_error(errorMsg);
     }
 
-    vkBindBufferMemory(*this->device, buffer, bufferMemory, 0);
+    vkBindBufferMemory(device, buffer, bufferMemory, 0);
 }
 
 uint32_t VulkanBufferCreator::findMemoryType(uint32_t typeFilter,
                                              VkMemoryPropertyFlags properties)
 {
     VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(this->device->getPhysicalDevice(),
-                                        &memProperties);
+    vkGetPhysicalDeviceMemoryProperties(
+        context->getDevice().getPhysicalDevice(), &memProperties);
 
     for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++)
     {
@@ -83,14 +79,16 @@ void VulkanBufferCreator::copyBuffer(VkBuffer srcBuffer,
                                      VkBuffer dstBuffer,
                                      VkDeviceSize size)
 {
+    const VulkanRenderPass &renderPass = context->getRenderPass();
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandPool = this->renderPass->getCommandPool();
+    allocInfo.commandPool = renderPass.getCommandPool();
     allocInfo.commandBufferCount = 1;
 
+    const VulkanDevice &device = context->getDevice();
     VkCommandBuffer commandBuffer;
-    vkAllocateCommandBuffers(*this->device, &allocInfo, &commandBuffer);
+    vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -111,10 +109,9 @@ void VulkanBufferCreator::copyBuffer(VkBuffer srcBuffer,
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    vkQueueSubmit(
-        this->device->getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
-    vkQueueWaitIdle(this->device->getGraphicsQueue());
+    vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(device.getGraphicsQueue());
 
     vkFreeCommandBuffers(
-        *this->device, this->renderPass->getCommandPool(), 1, &commandBuffer);
+        device, renderPass.getCommandPool(), 1, &commandBuffer);
 }
