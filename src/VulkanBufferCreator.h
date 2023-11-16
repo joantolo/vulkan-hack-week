@@ -17,7 +17,8 @@ class VulkanBufferCreator
     void copyBuffer(VkBuffer srcBuffer,
                     VkBuffer dstBuffer,
                     VkDeviceSize size) const;
-    VkCommandBuffer createCommandBuffer() const;
+    void createCommandBuffers(VkCommandBuffer *commandBuffers,
+                              uint32_t count) const;
 
   private:
     void createCommandPool();

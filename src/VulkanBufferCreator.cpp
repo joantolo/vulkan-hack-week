@@ -88,7 +88,8 @@ void VulkanBufferCreator::copyBuffer(VkBuffer srcBuffer,
                                      VkBuffer dstBuffer,
                                      VkDeviceSize size) const
 {
-    VkCommandBuffer commandBuffer = createCommandBuffer();
+    VkCommandBuffer commandBuffer;
+    createCommandBuffers(&commandBuffer, 1);
 
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -109,7 +110,7 @@ void VulkanBufferCreator::copyBuffer(VkBuffer srcBuffer,
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandBuffer;
 
-    VulkanDevice device = context->getDevice();
+    const VulkanDevice &device = context->getDevice();
     vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
     vkQueueWaitIdle(device.getGraphicsQueue());
 
@@ -138,23 +139,21 @@ void VulkanBufferCreator::createCommandPool()
     }
 }
 
-VkCommandBuffer VulkanBufferCreator::createCommandBuffer() const
+void VulkanBufferCreator::createCommandBuffers(VkCommandBuffer *commandBuffers,
+                                               uint32_t count) const
 {
     VkCommandBufferAllocateInfo allocInfo{};
     allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     allocInfo.commandPool = commandPool;
     allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocInfo.commandBufferCount = 1;
+    allocInfo.commandBufferCount = count;
 
-    VkCommandBuffer commandBuffer;
     VkResult result = vkAllocateCommandBuffers(
-        context->getDevice(), &allocInfo, &commandBuffer);
+        context->getDevice(), &allocInfo, commandBuffers);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to allocate command buffer: ");
         errorMsg.append(string_VkResult(result));
         throw std::runtime_error(errorMsg);
     }
-
-    return commandBuffer;
 }

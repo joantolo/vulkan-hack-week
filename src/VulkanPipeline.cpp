@@ -10,19 +10,30 @@
 
 #include "VulkanPipeline.h"
 
+static const int MAX_FRAMES_IN_FLIGHT = 2;
+
 static const std::vector<VkDynamicState> dynamicStates = {
     VK_DYNAMIC_STATE_VIEWPORT,
     VK_DYNAMIC_STATE_SCISSOR};
 
-VulkanPipeline::VulkanPipeline(VulkanContext *context) : context(context) {}
+VulkanPipeline::VulkanPipeline(VulkanContext *context)
+    : context(context),
+      framesInFlight(MAX_FRAMES_IN_FLIGHT)
+{
+}
 
 VulkanPipeline::~VulkanPipeline()
 {
     VkDevice device = context->getDevice();
 
-    vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-    vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-    vkDestroyFence(device, inFlightFence, nullptr);
+    for (const auto &frameInFlight : framesInFlight)
+    {
+        vkDestroySemaphore(
+            device, frameInFlight.imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(
+            device, frameInFlight.renderFinishedSemaphore, nullptr);
+        vkDestroyFence(device, frameInFlight.inFlightFence, nullptr);
+    }
 
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
     vkDestroyShaderModule(device, vertShaderModule, nullptr);
@@ -34,46 +45,52 @@ VulkanPipeline::~VulkanPipeline()
 void VulkanPipeline::init()
 {
     createPipeline();
-    createSyncObjects();
+    createFramesInFlight();
 }
 
 void VulkanPipeline::drawFrame(const Triangle &triangle) const
 {
     const VulkanDevice &device = context->getDevice();
 
-    vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-    vkResetFences(device, 1, &inFlightFence);
+    static uint32_t currentFrameIndex = 0;
+    const FrameInFlight &currentFrame = framesInFlight[currentFrameIndex];
+
+    vkWaitForFences(
+        device, 1, &currentFrame.inFlightFence, VK_TRUE, UINT64_MAX);
+    vkResetFences(device, 1, &currentFrame.inFlightFence);
 
     uint32_t imageIndex;
     vkAcquireNextImageKHR(device,
                           context->getSwapChain(),
                           UINT64_MAX,
-                          imageAvailableSemaphore,
+                          currentFrame.imageAvailableSemaphore,
                           VK_NULL_HANDLE,
                           &imageIndex);
 
     const VulkanRenderPass &renderPass = context->getRenderPass();
-    renderPass.resetCommandBuffer();
-    renderPass.recordCommandBuffer(triangle, imageIndex);
+
+    vkResetCommandBuffer(currentFrame.commandBuffer, 0);
+    renderPass.recordCommandBuffer(
+        currentFrame.commandBuffer, triangle, imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    VkSemaphore waitSemaphores[] = {imageAvailableSemaphore};
+    VkSemaphore waitSemaphores[] = {currentFrame.imageAvailableSemaphore};
     VkPipelineStageFlags waitStages[] = {
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = waitSemaphores;
     submitInfo.pWaitDstStageMask = waitStages;
     submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &renderPass.getCommandBuffer();
+    submitInfo.pCommandBuffers = &currentFrame.commandBuffer;
 
-    VkSemaphore signalSemaphores[] = {renderFinishedSemaphore};
+    VkSemaphore signalSemaphores[] = {currentFrame.renderFinishedSemaphore};
     submitInfo.signalSemaphoreCount = 1;
     submitInfo.pSignalSemaphores = signalSemaphores;
 
-    VkResult result =
-        vkQueueSubmit(device.getGraphicsQueue(), 1, &submitInfo, inFlightFence);
+    VkResult result = vkQueueSubmit(
+        device.getGraphicsQueue(), 1, &submitInfo, currentFrame.inFlightFence);
     if (result != VK_SUCCESS)
     {
         std::string errorMsg("Failed to submit draw commant buffer: ");
@@ -92,6 +109,8 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
     presentInfo.pResults = nullptr; // Optional
 
     vkQueuePresentKHR(device.getPresentQueue(), &presentInfo);
+
+    currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
 void VulkanPipeline::createPipeline()
@@ -153,8 +172,10 @@ void VulkanPipeline::createPipeline()
     }
 }
 
-void VulkanPipeline::createSyncObjects()
+void VulkanPipeline::createFramesInFlight()
 {
+    VkDevice device = context->getDevice();
+
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -162,17 +183,31 @@ void VulkanPipeline::createSyncObjects()
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    VkDevice device = context->getDevice();
-    if (vkCreateSemaphore(
-            device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) !=
-            VK_SUCCESS ||
-        vkCreateSemaphore(
-            device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) !=
-            VK_SUCCESS ||
-        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) !=
-            VK_SUCCESS)
+    std::vector<VkCommandBuffer> commandBuffers(MAX_FRAMES_IN_FLIGHT);
+    context->getBufferCreator().createCommandBuffers(commandBuffers.data(),
+                                                     MAX_FRAMES_IN_FLIGHT);
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
     {
-        throw std::runtime_error("failed to create semaphores!");
+        if (vkCreateSemaphore(device,
+                              &semaphoreInfo,
+                              nullptr,
+                              &framesInFlight[i].imageAvailableSemaphore) !=
+                VK_SUCCESS ||
+            vkCreateSemaphore(device,
+                              &semaphoreInfo,
+                              nullptr,
+                              &framesInFlight[i].renderFinishedSemaphore) !=
+                VK_SUCCESS ||
+            vkCreateFence(device,
+                          &fenceInfo,
+                          nullptr,
+                          &framesInFlight[i].inFlightFence) != VK_SUCCESS)
+        {
+            throw std::runtime_error("failed to create semaphores!");
+        }
+
+        framesInFlight[i].commandBuffer = commandBuffers[i];
     }
 }
 

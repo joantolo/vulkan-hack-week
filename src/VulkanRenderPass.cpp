@@ -20,7 +20,6 @@ VulkanRenderPass::~VulkanRenderPass()
 void VulkanRenderPass::init()
 {
     createRenderPass();
-    createCommandBuffer();
     const_cast<VulkanSwapChain &>(context->getSwapChain()).createFrameBuffers();
 }
 
@@ -72,17 +71,8 @@ void VulkanRenderPass::createRenderPass()
     }
 }
 
-void VulkanRenderPass::createCommandBuffer()
-{
-    commandBuffer = context->getBufferCreator().createCommandBuffer();
-}
-
-void VulkanRenderPass::resetCommandBuffer() const
-{
-    vkResetCommandBuffer(commandBuffer, 0);
-}
-
-void VulkanRenderPass::recordCommandBuffer(const Triangle &triangle,
+void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
+                                           const Triangle &triangle,
                                            uint32_t imageIndex) const
 {
     VkCommandBufferBeginInfo beginInfo{};

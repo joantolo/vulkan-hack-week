@@ -2,6 +2,15 @@
 #define VULKAN_PIPELINE_H
 
 #include "VulkanTypes.h"
+#include <vector>
+
+struct FrameInFlight
+{
+    VkCommandBuffer commandBuffer;
+    VkSemaphore imageAvailableSemaphore;
+    VkSemaphore renderFinishedSemaphore;
+    VkFence inFlightFence;
+};
 
 class VulkanPipeline
 {
@@ -13,7 +22,7 @@ class VulkanPipeline
 
   private:
     void createPipeline();
-    void createSyncObjects();
+    void createFramesInFlight();
     std::vector<VkPipelineShaderStageCreateInfo> createShaders();
     VkShaderModule createShaderModule(const std::vector<char> &code);
     VkPipelineVertexInputStateCreateInfo createVertexInputInfo(
@@ -42,8 +51,6 @@ class VulkanPipeline
     VkShaderModule vertShaderModule;
     VkShaderModule fragShaderModule;
 
-    VkSemaphore imageAvailableSemaphore;
-    VkSemaphore renderFinishedSemaphore;
-    VkFence inFlightFence;
+    std::vector<FrameInFlight> framesInFlight;
 };
 #endif // VULKAN_PIPELINE_H
