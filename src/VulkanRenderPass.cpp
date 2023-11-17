@@ -123,8 +123,10 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
     VkBuffer vertexBuffers[] = {triangle.getVertexBuffer()};
     VkDeviceSize offsets[] = {0};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
+    vkCmdBindIndexBuffer(
+        commandBuffer, triangle.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT16);
 
-    vkCmdDraw(commandBuffer, triangle.getVertexCount(), 1, 0, 0);
+    vkCmdDrawIndexed(commandBuffer, triangle.getIndexCount(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
 

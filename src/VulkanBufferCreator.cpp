@@ -1,6 +1,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 
+#include <cstring>
 #include <iostream>
 
 #include "VulkanContext.h"
@@ -20,6 +21,40 @@ VulkanBufferCreator::~VulkanBufferCreator()
 void VulkanBufferCreator::init()
 {
     createCommandPool();
+}
+
+void VulkanBufferCreator::createStagingBuffer(
+    const void *bytes,
+    VkDeviceSize size,
+    VkBufferUsageFlags usage,
+    VkBuffer &buffer,
+    VkDeviceMemory &bufferMemory) const
+{
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    createBuffer(size,
+                 VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                 stagingBuffer,
+                 stagingBufferMemory);
+
+    VkDevice device = context->getDevice();
+    void *data;
+    vkMapMemory(device, stagingBufferMemory, 0, size, 0, &data);
+    memcpy(data, bytes, (size_t)size);
+    vkUnmapMemory(device, stagingBufferMemory);
+
+    createBuffer(size,
+                 VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 buffer,
+                 bufferMemory);
+
+    copyBuffer(stagingBuffer, buffer, size);
+
+    vkDestroyBuffer(device, stagingBuffer, nullptr);
+    vkFreeMemory(device, stagingBufferMemory, nullptr);
 }
 
 void VulkanBufferCreator::createBuffer(VkDeviceSize size,

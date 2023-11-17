@@ -14,6 +14,7 @@ class Triangle
 
   private:
     void createVertexBuffer();
+    void createIndexBuffer();
 
   public:
     VkBuffer getVertexBuffer() const { return vertexBuffer; }
@@ -21,16 +22,26 @@ class Triangle
     {
         return static_cast<uint32_t>(vertices.size());
     }
+    VkBuffer getIndexBuffer() const { return indexBuffer; }
+    uint32_t getIndexCount() const
+    {
+        return static_cast<uint32_t>(indices.size());
+    }
 
   private:
     VulkanContext *context;
 
-    const std::vector<Vertex> vertices = {{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-                                          {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-                                          {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}};
+    const std::vector<Vertex> vertices = {{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+                                          {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}},
+                                          {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+                                          {{-0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}}};
+
+    const std::vector<uint16_t> indices = {0, 1, 2, 2, 3, 0};
 
     VkBuffer vertexBuffer;
     VkDeviceMemory vertexBufferMemory;
+    VkBuffer indexBuffer;
+    VkDeviceMemory indexBufferMemory;
 };
 
 #endif // TRIANGLE_H

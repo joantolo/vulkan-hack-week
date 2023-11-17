@@ -9,6 +9,16 @@ class VulkanBufferCreator
     VulkanBufferCreator(VulkanContext *contenxt);
     ~VulkanBufferCreator();
     void init();
+    void createStagingBuffer(const void *bytes,
+                             VkDeviceSize size,
+                             VkBufferUsageFlags usage,
+                             VkBuffer &buffer,
+                             VkDeviceMemory &bufferMemory) const;
+    void createCommandBuffers(VkCommandBuffer *commandBuffers,
+                              uint32_t count) const;
+
+  private:
+    void createCommandPool();
     void createBuffer(VkDeviceSize size,
                       VkBufferUsageFlags usage,
                       VkMemoryPropertyFlags properties,
@@ -17,11 +27,6 @@ class VulkanBufferCreator
     void copyBuffer(VkBuffer srcBuffer,
                     VkBuffer dstBuffer,
                     VkDeviceSize size) const;
-    void createCommandBuffers(VkCommandBuffer *commandBuffers,
-                              uint32_t count) const;
-
-  private:
-    void createCommandPool();
     uint32_t findMemoryType(uint32_t typeFilter,
                             VkMemoryPropertyFlags properties) const;
 
