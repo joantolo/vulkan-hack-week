@@ -1,6 +1,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 #include <vulkan/vulkan.h>
 
+#include <cstring>
 #include <iostream>
 
 #include "config.h"
@@ -33,6 +34,9 @@ VulkanPipeline::~VulkanPipeline()
         vkDestroySemaphore(
             device, frameInFlight.renderFinishedSemaphore, nullptr);
         vkDestroyFence(device, frameInFlight.inFlightFence, nullptr);
+
+        vkDestroyBuffer(device, frameInFlight.uniformBuffers.buffer, nullptr);
+        vkFreeMemory(device, frameInFlight.uniformBuffers.memory, nullptr);
     }
 
     vkDestroyShaderModule(device, fragShaderModule, nullptr);
@@ -40,12 +44,18 @@ VulkanPipeline::~VulkanPipeline()
 
     vkDestroyPipeline(device, graphicsPipeline, nullptr);
     vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
+
+    vkDestroyDescriptorPool(device, descriptor.pool, nullptr);
+    vkDestroyDescriptorSetLayout(device, descriptor.setLayout, nullptr);
 }
 
 void VulkanPipeline::init()
 {
-    createPipeline();
+    createDescriptor();
+
     createFramesInFlight();
+
+    createPipeline();
 }
 
 void VulkanPipeline::drawFrame(const Triangle &triangle) const
@@ -84,8 +94,15 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
     const VulkanRenderPass &renderPass = context->getRenderPass();
 
     vkResetCommandBuffer(currentFrame.commandBuffer, 0);
-    renderPass.recordCommandBuffer(
-        currentFrame.commandBuffer, triangle, imageIndex);
+    renderPass.recordCommandBuffer(currentFrame.commandBuffer,
+                                   &currentFrame.uniformBuffers.descriptorSet,
+                                   triangle,
+                                   imageIndex);
+
+    UniformBufferObject ubo =
+        updateUniform((float)swapChain.getExtent().width,
+                      (float)swapChain.getExtent().height);
+    memcpy(currentFrame.uniformBuffers.mapped, &ubo, sizeof(ubo));
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -136,6 +153,171 @@ void VulkanPipeline::drawFrame(const Triangle &triangle) const
     currentFrameIndex = (currentFrameIndex + 1) % MAX_FRAMES_IN_FLIGHT;
 }
 
+void VulkanPipeline::createDescriptor()
+{
+    createDescriptorPool();
+    createDescriptorSetLayout();
+}
+
+void VulkanPipeline::createDescriptorPool()
+{
+    descriptor.setsCount = static_cast<uint32_t>(MAX_FRAMES_IN_FLIGHT);
+
+    VkDescriptorPoolSize poolSize{};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = descriptor.setsCount;
+
+    VkDescriptorPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    poolInfo.poolSizeCount = 1;
+    poolInfo.pPoolSizes = &poolSize;
+    poolInfo.maxSets = descriptor.setsCount;
+
+    if (vkCreateDescriptorPool(
+            context->getDevice(), &poolInfo, nullptr, &descriptor.pool) !=
+        VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create descriptor pool!");
+    }
+}
+
+void VulkanPipeline::createDescriptorSetLayout()
+{
+    VkDescriptorSetLayoutBinding uboLayoutBinding{};
+    uboLayoutBinding.binding = 0;
+    uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    uboLayoutBinding.descriptorCount = 1;
+    uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    uboLayoutBinding.pImmutableSamplers = nullptr; // Optional
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = 1;
+    layoutInfo.pBindings = &uboLayoutBinding;
+    if (vkCreateDescriptorSetLayout(context->getDevice(),
+                                    &layoutInfo,
+                                    nullptr,
+                                    &descriptor.setLayout) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create descriptor set layout!");
+    }
+}
+
+void VulkanPipeline::createDescriptorSets(VkDescriptorSet *descriptorSets)
+{
+    std::vector<VkDescriptorSetLayout> layouts(descriptor.setsCount,
+                                               descriptor.setLayout);
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = descriptor.pool;
+    allocInfo.descriptorSetCount = descriptor.setsCount;
+    allocInfo.pSetLayouts = layouts.data();
+
+    if (vkAllocateDescriptorSets(
+            context->getDevice(), &allocInfo, descriptorSets) != VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to allocate descriptor sets!");
+    }
+}
+
+void VulkanPipeline::updateDescriptorSet(VkDescriptorSet descriptorSet,
+                                         VkBuffer uniformBuffer)
+{
+    VkDescriptorBufferInfo bufferInfo{};
+    bufferInfo.buffer = uniformBuffer;
+    bufferInfo.offset = 0;
+    bufferInfo.range = sizeof(UniformBufferObject);
+
+    VkWriteDescriptorSet descriptorWrite{};
+    descriptorWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    descriptorWrite.dstSet = descriptorSet;
+    descriptorWrite.dstBinding = 0;
+    descriptorWrite.dstArrayElement = 0;
+    descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    descriptorWrite.descriptorCount = 1;
+    descriptorWrite.pBufferInfo = &bufferInfo;
+    descriptorWrite.pImageInfo = nullptr;       // Optional
+    descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+    vkUpdateDescriptorSets(
+        context->getDevice(), 1, &descriptorWrite, 0, nullptr);
+}
+
+void VulkanPipeline::createFramesInFlight()
+{
+    std::vector<VkCommandBuffer> commandBuffers(MAX_FRAMES_IN_FLIGHT);
+    context->getBufferCreator().createCommandBuffers(commandBuffers.data(),
+                                                     MAX_FRAMES_IN_FLIGHT);
+
+    std::vector<VkDescriptorSet> descriptorSets(MAX_FRAMES_IN_FLIGHT);
+    createDescriptorSets(descriptorSets.data());
+
+    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+    {
+        framesInFlight[i].commandBuffer = commandBuffers[i];
+
+        createSyncObjects(framesInFlight[i].imageAvailableSemaphore,
+                          framesInFlight[i].renderFinishedSemaphore,
+                          framesInFlight[i].inFlightFence);
+
+        createUniformBuffers(framesInFlight[i].uniformBuffers.buffer,
+                             framesInFlight[i].uniformBuffers.memory,
+                             &framesInFlight[i].uniformBuffers.mapped);
+
+        framesInFlight[i].uniformBuffers.descriptorSet = descriptorSets[i];
+        updateDescriptorSet(framesInFlight[i].uniformBuffers.descriptorSet,
+                            framesInFlight[i].uniformBuffers.buffer);
+    }
+}
+
+void VulkanPipeline::createSyncObjects(VkSemaphore &imageAvailableSemaphore,
+                                       VkSemaphore &renderFinishedSemaphore,
+                                       VkFence &inFlightFence)
+{
+    VkDevice device = context->getDevice();
+
+    VkSemaphoreCreateInfo semaphoreInfo{};
+    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+    VkFenceCreateInfo fenceInfo{};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    if (vkCreateSemaphore(
+            device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) !=
+            VK_SUCCESS ||
+        vkCreateSemaphore(
+            device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) !=
+            VK_SUCCESS ||
+        vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence) !=
+            VK_SUCCESS)
+    {
+        throw std::runtime_error("failed to create semaphores!");
+    }
+}
+
+void VulkanPipeline::createUniformBuffers(VkBuffer &uniformBuffers,
+                                          VkDeviceMemory &uniformBuffersMemory,
+                                          void **uniformBuffersMapped)
+{
+
+    VkDeviceSize bufferSize = sizeof(UniformBufferObject);
+    context->getBufferCreator().createBuffer(
+        bufferSize,
+        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+            VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+        uniformBuffers,
+        uniformBuffersMemory);
+
+    vkMapMemory(context->getDevice(),
+                uniformBuffersMemory,
+                0,
+                bufferSize,
+                0,
+                uniformBuffersMapped);
+}
+
 void VulkanPipeline::createPipeline()
 {
     VkGraphicsPipelineCreateInfo pipelineInfo{};
@@ -174,7 +356,8 @@ void VulkanPipeline::createPipeline()
     VkPipelineDynamicStateCreateInfo dynamicState = createDynamicState();
     pipelineInfo.pDynamicState = &dynamicState;
 
-    pipelineInfo.layout = createPipelineLayout();
+    createPipelineLayout();
+    pipelineInfo.layout = pipelineLayout;
 
     pipelineInfo.renderPass = context->getRenderPass();
     pipelineInfo.subpass = 0;
@@ -195,42 +378,22 @@ void VulkanPipeline::createPipeline()
     }
 }
 
-void VulkanPipeline::createFramesInFlight()
+void VulkanPipeline::createPipelineLayout()
 {
-    VkDevice device = context->getDevice();
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = &descriptor.setLayout;
+    pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
+    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-    VkSemaphoreCreateInfo semaphoreInfo{};
-    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fenceInfo{};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    std::vector<VkCommandBuffer> commandBuffers(MAX_FRAMES_IN_FLIGHT);
-    context->getBufferCreator().createCommandBuffers(commandBuffers.data(),
-                                                     MAX_FRAMES_IN_FLIGHT);
-
-    for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; ++i)
+    VkResult result = vkCreatePipelineLayout(
+        context->getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
+    if (result != VK_SUCCESS)
     {
-        if (vkCreateSemaphore(device,
-                              &semaphoreInfo,
-                              nullptr,
-                              &framesInFlight[i].imageAvailableSemaphore) !=
-                VK_SUCCESS ||
-            vkCreateSemaphore(device,
-                              &semaphoreInfo,
-                              nullptr,
-                              &framesInFlight[i].renderFinishedSemaphore) !=
-                VK_SUCCESS ||
-            vkCreateFence(device,
-                          &fenceInfo,
-                          nullptr,
-                          &framesInFlight[i].inFlightFence) != VK_SUCCESS)
-        {
-            throw std::runtime_error("failed to create semaphores!");
-        }
-
-        framesInFlight[i].commandBuffer = commandBuffers[i];
+        std::string errorMsg("Failed to create pipeline layout: ");
+        errorMsg.append(string_VkResult(result));
+        throw std::runtime_error(errorMsg);
     }
 }
 
@@ -341,7 +504,7 @@ VkPipelineRasterizationStateCreateInfo VulkanPipeline::createRasterizer()
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
     rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-    rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
     rasterizer.depthBiasConstantFactor = 0.0f; // Optional
     rasterizer.depthBiasClamp = 0.0f;          // Optional
@@ -405,25 +568,4 @@ VkPipelineDynamicStateCreateInfo VulkanPipeline::createDynamicState()
         static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
     return dynamicState;
-}
-
-VkPipelineLayout VulkanPipeline::createPipelineLayout()
-{
-    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pipelineLayoutInfo.setLayoutCount = 0;            // Optional
-    pipelineLayoutInfo.pSetLayouts = nullptr;         // Optional
-    pipelineLayoutInfo.pushConstantRangeCount = 0;    // Optional
-    pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-    VkResult result = vkCreatePipelineLayout(
-        context->getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
-    if (result != VK_SUCCESS)
-    {
-        std::string errorMsg("Failed to create pipeline layout: ");
-        errorMsg.append(string_VkResult(result));
-        throw std::runtime_error(errorMsg);
-    }
-
-    return pipelineLayout;
 }

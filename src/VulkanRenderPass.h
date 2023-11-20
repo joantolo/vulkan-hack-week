@@ -10,6 +10,7 @@ class VulkanRenderPass
     ~VulkanRenderPass();
     void init();
     void recordCommandBuffer(VkCommandBuffer commandBuffer,
+                             const VkDescriptorSet *descriptorSets,
                              const Triangle &triangle,
                              uint32_t imageIndex) const;
 

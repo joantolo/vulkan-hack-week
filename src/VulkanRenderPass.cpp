@@ -71,9 +71,11 @@ void VulkanRenderPass::createRenderPass()
     }
 }
 
-void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
-                                           const Triangle &triangle,
-                                           uint32_t imageIndex) const
+void VulkanRenderPass::recordCommandBuffer(
+    VkCommandBuffer commandBuffer,
+    const VkDescriptorSet *descriptorSets,
+    const Triangle &triangle,
+    uint32_t imageIndex) const
 {
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -102,8 +104,9 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
     vkCmdBeginRenderPass(
         commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    vkCmdBindPipeline(
-        commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context->getPipeline());
+    const VulkanPipeline &pipeline = context->getPipeline();
+
+    vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
     const VkExtent2D &swapChainExtent = swapChain.getExtent();
     VkViewport viewport{};
@@ -125,6 +128,15 @@ void VulkanRenderPass::recordCommandBuffer(VkCommandBuffer commandBuffer,
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
     vkCmdBindIndexBuffer(
         commandBuffer, triangle.getIndexBuffer(), 0, VK_INDEX_TYPE_UINT16);
+
+    vkCmdBindDescriptorSets(commandBuffer,
+                            VK_PIPELINE_BIND_POINT_GRAPHICS,
+                            pipeline.getLayout(),
+                            0,
+                            1,
+                            descriptorSets,
+                            0,
+                            nullptr);
 
     vkCmdDrawIndexed(commandBuffer, triangle.getIndexCount(), 1, 0, 0, 0);
 
