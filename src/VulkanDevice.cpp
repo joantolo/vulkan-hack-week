@@ -109,28 +109,12 @@ void VulkanDevice::createLogicalDevice()
 
 bool VulkanDevice::isDeviceSuitable(VkPhysicalDevice device) const
 {
-    VkPhysicalDeviceProperties deviceProperties;
-    VkPhysicalDeviceFeatures deviceFeatures;
-
-    vkGetPhysicalDeviceProperties(device, &deviceProperties);
-    vkGetPhysicalDeviceFeatures(device, &deviceFeatures);
-
-    bool extensionsSupported = checkDeviceExtensionSupport(device);
-
-    bool swapChainAdequate = false;
-    if (extensionsSupported)
-    {
-        SwapChainSupportDetails swapChainSupport =
-            querySwapChainSupport(device);
-        swapChainAdequate = !swapChainSupport.formats.empty() &&
-                            !swapChainSupport.presentModes.empty();
-    }
-
-    return findQueueFamilies(device).isComplete() && extensionsSupported &&
-           swapChainAdequate;
+    return supportsRequiredExtensions(device) &&
+           supportsRequiredSwapchain(device) &&
+           findQueueFamilies(device).allSet();
 }
 
-bool VulkanDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) const
+bool VulkanDevice::supportsRequiredExtensions(VkPhysicalDevice device) const
 {
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(
@@ -149,6 +133,14 @@ bool VulkanDevice::checkDeviceExtensionSupport(VkPhysicalDevice device) const
     }
 
     return requiredExtensions.empty();
+}
+
+bool VulkanDevice::supportsRequiredSwapchain(VkPhysicalDevice device) const
+{
+    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
+
+    return !swapChainSupport.formats.empty() &&
+           !swapChainSupport.presentModes.empty();
 }
 
 SwapChainSupportDetails VulkanDevice::querySwapChainSupport(
@@ -207,7 +199,7 @@ QueueFamilyIndices VulkanDevice::findQueueFamilies(
         if (presentSupport)
             indices.presentFamily = i;
 
-        if (indices.isComplete())
+        if (indices.allSet())
             break;
 
         i++;

@@ -14,7 +14,8 @@ class VulkanDevice
     void pickPhysicalDevice();
     void createLogicalDevice();
     bool isDeviceSuitable(VkPhysicalDevice device) const;
-    bool checkDeviceExtensionSupport(VkPhysicalDevice device) const;
+    bool supportsRequiredExtensions(VkPhysicalDevice device) const;
+    bool supportsRequiredSwapchain(VkPhysicalDevice device) const;
     SwapChainSupportDetails querySwapChainSupport(
         VkPhysicalDevice device) const;
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device) const;

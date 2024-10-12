@@ -187,14 +187,16 @@ void VulkanSwapChain::clear()
 VkSurfaceFormatKHR VulkanSwapChain::chooseSwapSurfaceFormat(
     const std::vector<VkSurfaceFormatKHR> &availableFormats) const
 {
-    for (const auto &availableFormat : availableFormats)
-    {
-        if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB &&
-            availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
-        {
-            return availableFormat;
-        }
-    }
+    auto it = std::find_if(availableFormats.begin(),
+                           availableFormats.end(),
+                           [](const VkSurfaceFormatKHR &val) {
+                               return val.format == VK_FORMAT_B8G8R8A8_SRGB &&
+                                      val.colorSpace ==
+                                          VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+                           });
+
+    if (it != availableFormats.end())
+        return *it;
 
     return availableFormats[0];
 }
@@ -202,13 +204,12 @@ VkSurfaceFormatKHR VulkanSwapChain::chooseSwapSurfaceFormat(
 VkPresentModeKHR VulkanSwapChain::chooseSwapPresentMode(
     const std::vector<VkPresentModeKHR> &availablePresentModes) const
 {
-    for (const auto &availablePresentMode : availablePresentModes)
-    {
-        if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
-        {
-            return availablePresentMode;
-        }
-    }
+    auto it = std::find(availablePresentModes.begin(),
+                        availablePresentModes.end(),
+                        VK_PRESENT_MODE_MAILBOX_KHR);
+
+    if (it != availablePresentModes.end())
+        return *it;
 
     return VK_PRESENT_MODE_FIFO_KHR;
 }
